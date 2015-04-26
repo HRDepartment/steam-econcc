@@ -1,0 +1,26 @@
+{
+  "name": "steam-econcc",
+  "version": "0.1.0",
+  "description": "Currency conversion and formatting library for Steam economy and real world currencies, based on the format used by backpack.tf.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jasmine"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caresx/steam-econcc"
+  },
+  "keywords": [
+    "steam",
+    "backpacktf",
+    "tf",
+    "dota",
+    "csgo"
+  ],
+  "author": "caresx",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/caresx/steam-econcc/issues"
+  },
+  "homepage": "https://github.com/caresx/steam-econcc"
+}
