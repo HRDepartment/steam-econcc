@@ -6,7 +6,7 @@ An instance must be created using new: new EconCC(...)
 ##### enum EconCC.Mode
 EconCC.Mode.{Short, Long, ShortRange, LongRange, Label}
 
-Formatting is described in [#format](#format).
+Formatting is described in [#format](#formateconccrangedvalueeconccvalue-value-enum-econccmode-modeeconccmodeshort---string).
 
 ##### enum EconCC.Range
 EconCC.Range.{Low, Mid, High}
