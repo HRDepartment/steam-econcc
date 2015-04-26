@@ -89,7 +89,8 @@ Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to 
 ```javascript
     // Trailing auto
     // Step disabled
-    em.format({value: 100, currency: 'ref'});```
+    em.format({value: 100, currency: 'ref'});
+```
 
 * Short: `100.00 ref`
 * Long: `100.00 ref (5.88 keys, 1.09 buds, $11.50)`
@@ -98,7 +99,8 @@ Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to 
 * Label: `1.09 buds`
 
 ```javascript
-em.format({low: 100, high: 200, currency: 'ref'});```
+em.format({low: 100, high: 200, currency: 'ref'});
+```
 
 * Short: `150.00 ref`
 * Long: `150.00 ref (8.82 keys, 1.64 buds, $17.25)`
@@ -107,7 +109,8 @@ em.format({low: 100, high: 200, currency: 'ref'});```
 
 ```javascript
     // Step enabled
-    em.format({value: 100, currency: 'ref'});```
+    em.format({value: 100, currency: 'ref'});
+```
 
 * Short: `100.00 ref`
 * Long: `100.00 ref (5.9 keys, 1.1 buds, $11.50)`
