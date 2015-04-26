@@ -86,23 +86,29 @@ Mode defaults to EconCC.Mode.Short.
 ##### #format(EconCCRangedValue|EconCCValue value, enum EconCC.Mode mode=EconCC.Mode.Short) -> String
 Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to EconCCValue using #valueFromRange). Each mode has its own special formatting:
 
+```javascript
     // Trailing auto
     // Step disabled
-    em.format({value: 100, currency: 'ref'});
+    em.format({value: 100, currency: 'ref'});```
+
 * Short: `100.00 ref`
 * Long: `100.00 ref (5.88 keys, 1.09 buds, $11.50)`
 * ShortRange: `100.00 ref`
 * LongRange: `100.00 ref (5.88 keys, 1.09 buds, $11.50)`
 * Label: `1.09 buds`
 
-    em.format({low: 100, high: 200, currency: 'ref'});
+```javascript
+em.format({low: 100, high: 200, currency: 'ref'});```
+
 * Short: `150.00 ref`
 * Long: `150.00 ref (8.82 keys, 1.64 buds, $17.25)`
 * ShortRange: `100.00–200.00 ref`
 * LongRange: `100.00–200.00 ref (8.82 keys, 1.64 buds, $17.25)`
 
+```javascript
     // Step enabled
-    em.format({value: 100, currency: 'ref'});
+    em.format({value: 100, currency: 'ref'});```
+
 * Short: `100.00 ref`
 * Long: `100.00 ref (5.9 keys, 1.1 buds, $11.50)`
 * Label: `1.1 buds`
@@ -112,11 +118,14 @@ Important to note: the range separator is not - (HYPHEN-MINUS U+002D) but instea
 ##### #formatRange(EconCCRangedValue value, enum EconCC.Mode mode=EconCC.Mode.Short) -> String
 Like #formatCurrencyRange, but includes any formatting by #format by calling #format up to two times, each time with an EconCCValue (based on low/high). Example:
 
+```javascript
     // Trailing auto
     // Step disabled
     em.formatRange({low: 100, high: 200, currency: 'ref'});
+```
+
 * Long: `100.00 ref (5.88 keys, 1.09 buds, $11.50) – 200.00 ref (11.76 keys, 2.19 buds, $23.00)`
 
-Behaves exactly
+Behaves exactly like #format when there's no {value.high}.
 
 Important to note: the range separator is not - (HYPHEN-MINUS U+002D) but instead – (EN DASH U+2013).

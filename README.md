@@ -10,11 +10,11 @@ npm: `npm install --save steam-econcc`
 
 ### Examples
 
-See [blob/master/spec/EconCCSpec.js](spec/EconCCSpec.js) for some example usage.
+See [EconCCSpec.js](spec/EconCCSpec.js) for some example usage.
 
 ### Documentation
 
-See [blob/master/Documentation.md](Documentation.md).
+See [Documentatin.md](Documentation.md).
 
 ### Testing
 
@@ -22,4 +22,4 @@ Tests are written using jasmine. Install the test runner globally (`npm install 
 
 ### License
 
-[blob/master/LICENSE](MIT)
+[MIT](License)
