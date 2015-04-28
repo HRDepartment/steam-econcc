@@ -14,7 +14,7 @@ See [EconCCSpec.js](spec/EconCCSpec.js) for some example usage.
 
 ### Documentation
 
-See [Documentatin.md](Documentation.md).
+See [Documentation.md](Documentation.md).
 
 ### Testing
 

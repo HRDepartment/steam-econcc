@@ -89,7 +89,7 @@ Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to 
 ```javascript
     // Trailing auto
     // Step disabled
-    em.format({value: 100, currency: 'ref'});
+    ec.format({value: 100, currency: 'ref'});
 ```
 
 * Short: `100.00 ref`
@@ -99,7 +99,7 @@ Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to 
 * Label: `1.09 buds`
 
 ```javascript
-em.format({low: 100, high: 200, currency: 'ref'});
+    ec.format({low: 100, high: 200, currency: 'ref'});
 ```
 
 * Short: `150.00 ref`
@@ -109,7 +109,7 @@ em.format({low: 100, high: 200, currency: 'ref'});
 
 ```javascript
     // Step enabled
-    em.format({value: 100, currency: 'ref'});
+    ec.format({value: 100, currency: 'ref'});
 ```
 
 * Short: `100.00 ref`
@@ -124,7 +124,7 @@ Like #formatCurrencyRange, but includes any formatting by #format by calling #fo
 ```javascript
     // Trailing auto
     // Step disabled
-    em.formatRange({low: 100, high: 200, currency: 'ref'});
+    ec.formatRange({low: 100, high: 200, currency: 'ref'});
 ```
 
 * Long: `100.00 ref (5.88 keys, 1.09 buds, $11.50) – 200.00 ref (11.76 keys, 2.19 buds, $23.00)`

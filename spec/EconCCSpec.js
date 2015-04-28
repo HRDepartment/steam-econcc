@@ -1,120 +1,15 @@
 describe("EconCC", function () {
     var EconCC = require('../index.js');
-    var currencies = {
-        "response": {
-            "currencies": {
-                "metal": {
-                    "quality": 6,
-                    "single": "ref",
-                    "plural": "ref",
-                    "round": 2,
-                    "blanket": 0,
-                    "craftable": "Craftable",
-                    "tradable": "Tradable",
-                    "defindex": 5002
-                },
-                "hat": {
-                    "quality": 6,
-                    "single": "hat",
-                    "plural": "hats",
-                    "round": 1,
-                    "blanket": 1,
-                    "blanket_name": "Random Craft Hat",
-                    "craftable": "Craftable",
-                    "tradable": "Tradable",
-                    "defindex": -2
-                },
-                "keys": {
-                    "quality": 6,
-                    "single": "key",
-                    "plural": "keys",
-                    "round": 2,
-                    "blanket": 0,
-                    "craftable": "Craftable",
-                    "tradable": "Tradable",
-                    "defindex": 5021
-                },
-                "earbuds": {
-                    "quality": 6,
-                    "single": "bud",
-                    "plural": "buds",
-                    "round": 2,
-                    "blanket": 0,
-                    "craftable": "Craftable",
-                    "tradable": "Tradable",
-                    "defindex": 143
-                }
-            }
-        }
-    };
-    var pricelist = {
-        "response": {
-            "items": {
-                "Mann Co. Supply Crate Key": {
-                    "defindex": [5021],
-                    "prices": {
-                        "6": {
-                            "Tradable": {
-                                "Craftable": [{
-                                    "currency": "metal",
-                                    "value": 17
-                                }]
-                            }
-                        }
-                    }
-                },
-                "Refined Metal": {
-                    "defindex": [5002],
-                    "prices": {
-                        "6": {
-                            "Tradable": {
-                                "Craftable": [{
-                                    "currency": "usd",
-                                    "value": 0.11,
-                                    "value_high": 0.12
-                                }]
-                            }
-                        }
-                    }
-                },
-                "Random Craft Hat": {
-                    "defindex": [-2],
-                    "prices": {
-                        "6": {
-                            "Tradable": {
-                                "Craftable": [{
-                                    "currency": "metal",
-                                    "value": 1.33
-                                }]
-                            }
-                        }
-                    }
-                },
-                "Earbuds": {
-                    "defindex": [143],
-                    "prices": {
-                        "6": {
-                            "Tradable": {
-                                "Craftable": [{
-                                    "currency": "keys",
-                                    "value": 5.25,
-                                    "value_high": 5.5
-                                }]
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
+    var currencies = require('./currencies.json');
+    var pricelist = require('./pricelist.json');
 
-    var em, f;
+    var ec, f;
     var emparams = EconCC.cFromBackpack(currencies, pricelist);
 
     beforeEach(function () {
-        em = new EconCC(emparams);
-        f = em.f.bind(em);
-        //f = function (str) { var a; return a = em.f(str), console.log(a), a; };
+        ec = new EconCC(emparams);
+        f = ec.f.bind(ec);
+        //f = function (str) { var a; return a = ec.f(str), console.log(a), a; };
     });
 
     describe("#format", function () {
@@ -176,19 +71,23 @@ describe("EconCC", function () {
         });
 
         it("should use the thousand separator", function () {
-            em.separators.thousand = "!";
+            ec.separators.thousand = "!";
 
             expect(f('100 earbuds:Long')).toBe('100 buds (9!137.50 ref, 537.5 keys, $1!050.81)');
         });
 
         it("should use the decimal separator", function () {
-            em.separators.decimal = "!";
+            ec.separators.decimal = "!";
 
             expect(f('100 earbuds:Long')).toBe('100 buds (9,137!50 ref, 537!5 keys, $1,050!81)');
         });
 
+        it("should accept EconCCValues", function () {
+            expect(ec.format({value: 1, currency: 'metal'})).toBe('1.00 ref');
+        });
+
         it("should step", function () {
-            em.step = EconCC.Enabled;
+            ec.step = EconCC.Enabled;
 
             expect(f('0.01 metal')).toBe('0.01 ref');
             expect(f('0.06 metal')).toBe('0.05 ref');
@@ -205,35 +104,35 @@ describe("EconCC", function () {
 
     describe("#convertToCurrency", function () {
         it("should convert hats to metal", function () {
-            expect(em.convertToCurrency(1, 'hat', 'metal')).toEqual({value: 1.33, currency: 'metal'});
+            expect(ec.convertToCurrency(1, 'hat', 'metal')).toEqual({value: 1.33, currency: 'metal'});
         });
         it("should convert earbuds to hats", function () {
-            expect(em.convertToCurrency(1.52, 'earbuds', 'hat')).toEqual({value: 104.42857142857143, currency: 'hat'});
+            expect(ec.convertToCurrency(1.52, 'earbuds', 'hat')).toEqual({value: 104.42857142857143, currency: 'hat'});
         });
     });
 
     describe("#formatCurrency", function () {
         it("should format keys", function () {
-            expect(em.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.2 keys');
+            expect(ec.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.2 keys');
         });
 
         describe("(trailing)", function () {
             it("should format keys", function () {
-                em.trailing = EconCC.Enabled;
-                expect(em.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.20 keys');
+                ec.trailing = EconCC.Enabled;
+                expect(ec.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.20 keys');
             });
         });
     });
 
     describe("#_gc", function () {
         it("should accept currency objects", function () {
-            expect(em._gc(em.currencies.metal)).toBe(em.currencies.metal);
+            expect(ec._gc(ec.currencies.metal)).toBe(ec.currencies.metal);
         });
         it("should accept internal names", function () {
-            expect(em._gc("metal")).toBe(em.currencies.metal);
+            expect(ec._gc("metal")).toBe(ec.currencies.metal);
         });
         it("should convert aliases", function () {
-            expect(em._gc("buds")).toBe(em.currencies.earbuds);
+            expect(ec._gc("buds")).toBe(ec.currencies.earbuds);
         });
     });
 });
