@@ -205,11 +205,9 @@ var EconCC = (function () {
                     val = +(typeof value === "number" ? value : value.value).toFixed(cur.round);
                 var trailing = cur.rwc || this.trailing === EconCC.Auto ? cur.trailing : this.trailing;
 
-                if (this.step !== EconCC.Disabled && cur.step && val > cur.step) {
-                    var decimal = Math.round(val % 1 / cur.step) * cur.step;
-                    if (decimal === cur.step) decimal = Math.floor(decimal * 100) / 100;
-                    val = (Math.floor(val) + decimal).toFixed(cur.round);
-
+                if (this.step !== EconCC.Disabled && cur.step && val >= cur.step) {
+                    var pow = Math.pow(10, cur.round < 2 ? 2 : cur.round);
+                    val = (Math.floor(val) + Math.floor(Math.round(val % 1 / cur.step) / Math.floor(1 / cur.step) * pow) / pow).toFixed(cur.round);
                     if (!trailing) val = +val;
                 } else {
                     // separated for readability

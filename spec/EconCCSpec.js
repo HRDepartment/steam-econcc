@@ -91,6 +91,12 @@ describe("EconCC", function () {
 
             expect(f('0.01 metal')).toBe('0.01 ref');
             expect(f('0.06 metal')).toBe('0.05 ref');
+            expect(f('0.11 metal')).toBe('0.11 ref');
+            expect(f('0.57 metal')).toBe('0.55 ref');
+            expect(f('0.48 metal')).toBe('0.50 ref');
+            expect(f('0.98 metal')).toBe('1.00 ref');
+            expect(f('0.99 metal')).toBe('1.00 ref');
+            expect(f('8139.99 metal')).toBe('8,140.00 ref');
 
             expect(f('100 hat:Long')).toBe('100 hats (133.00 ref, 7.8 keys, 1.45 buds, $15.29)');
         });
