@@ -135,4 +135,37 @@ describe("EconCC", function () {
             expect(ec._gc("buds")).toBe(ec.currencies.earbuds);
         });
     });
+
+    describe("#scope", function () {
+        it("resets the state after calling fn", function () {
+            expect(ec.trailing).toBe(EconCC.Auto);
+
+            ec.trailing = EconCC.Disabled;
+
+            ec.scope({trailing: EconCC.Enabled}, function (self) {
+                expect(self).toBe(ec);
+                expect(ec.trailing).toBe(EconCC.Enabled);
+            });
+
+            expect(ec.trailing).toBe(EconCC.Disabled);
+        });
+        it("can be stacked", function () {
+            expect(ec.trailing).toBe(EconCC.Auto);
+            expect(ec.step).toBe(EconCC.Disabled);
+
+            ec.scope({trailing: EconCC.Disabled, step: EconCC.Enabled}, function () {
+                expect(ec.trailing).toBe(EconCC.Disabled);
+                expect(ec.step).toBe(EconCC.Enabled);
+                ec.scope({trailing: EconCC.Enabled}, function () {
+                    expect(ec.trailing).toBe(EconCC.Enabled);
+                    expect(ec.step).toBe(EconCC.Enabled);
+                });
+                expect(ec.step).toBe(EconCC.Enabled);
+                expect(ec.trailing).toBe(EconCC.Disabled);
+            });
+
+            expect(ec.step).toBe(EconCC.Disabled);
+            expect(ec.trailing).toBe(EconCC.Auto);
+        });
+    });
 });

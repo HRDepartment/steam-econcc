@@ -18,16 +18,17 @@ class EconCC {
         }
     }
 
-    modify({currencies, aliases, range, step, trailing, separators} = {}) {
-        if (currencies !== undefined) {
-            this.currencies = currencies;
-            this.update();
+    modify(state={}) {
+        for (let name in state) {
+            let val = state[name],
+                self = this[name];
+
+            if (val !== undefined && typeof self !== 'undefined' && typeof self !== 'function') {
+                this[name] = val;
+            }
+
+            if (name === 'currencies') this.update();
         }
-        if (aliases !== undefined) this.aliases = aliases;
-        if (range !== undefined) this.range = range || EconCC.Range.Low;
-        if (step !== undefined) this.step = step;
-        if (trailing !== undefined) this.trailing = trailing;
-        if (separators !== undefined) this.separators = separators;
 
         return this;
     }
@@ -96,6 +97,14 @@ class EconCC {
     _rt() { return EconCC.RangeTag[this.range]; }
     _sepnum(num) {
         return ("" + num).replace(/\B(?=(\d{3})+(?!\d))/g, this.separators.thousand).replace(/\./g, this.separators.decimal);
+    }
+
+    scope(state, fn) {
+        let self = {currencies: this.currencies, aliases: this.aliases, range: this.range, step: this.step, trailing: this.trailing, separators: this.separators};
+
+        this.modify(state);
+        fn(this);
+        return this.modify(self);
     }
 
     convertToBC(value, currency=value.currency) {

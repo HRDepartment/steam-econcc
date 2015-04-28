@@ -30,24 +30,18 @@ var EconCC = (function () {
     _createClass(EconCC, [{
         key: "modify",
         value: function modify() {
-            var _ref = arguments[0] === undefined ? {} : arguments[0];
+            var state = arguments[0] === undefined ? {} : arguments[0];
 
-            var currencies = _ref.currencies;
-            var aliases = _ref.aliases;
-            var range = _ref.range;
-            var step = _ref.step;
-            var trailing = _ref.trailing;
-            var separators = _ref.separators;
+            for (var _name in state) {
+                var val = state[_name],
+                    _self = this[_name];
 
-            if (currencies !== undefined) {
-                this.currencies = currencies;
-                this.update();
+                if (val !== undefined && typeof _self !== "undefined" && typeof _self !== "function") {
+                    this[_name] = val;
+                }
+
+                if (_name === "currencies") this.update();
             }
-            if (aliases !== undefined) this.aliases = aliases;
-            if (range !== undefined) this.range = range || EconCC.Range.Low;
-            if (step !== undefined) this.step = step;
-            if (trailing !== undefined) this.trailing = trailing;
-            if (separators !== undefined) this.separators = separators;
 
             return this;
         }
@@ -130,6 +124,15 @@ var EconCC = (function () {
             return ("" + num).replace(/\B(?=(\d{3})+(?!\d))/g, this.separators.thousand).replace(/\./g, this.separators.decimal);
         }
     }, {
+        key: "scope",
+        value: function scope(state, fn) {
+            var self = { currencies: this.currencies, aliases: this.aliases, range: this.range, step: this.step, trailing: this.trailing, separators: this.separators };
+
+            this.modify(state);
+            fn(this);
+            return this.modify(self);
+        }
+    }, {
         key: "convertToBC",
         value: function convertToBC(value) {
             var currency = arguments[1] === undefined ? value.currency : arguments[1];
@@ -180,13 +183,13 @@ var EconCC = (function () {
         key: "formatCurrencyRange",
         value: function formatCurrencyRange(value) {
             if (value.high) {
-                var _name = false;
+                var _name2 = false;
                 var cur = this._gc(value.currency);
 
                 // $1.00–2.00
                 // 1.00–2.00 ref
-                if (cur.pos.sym === "start") _name = true;
-                return this.formatCurrency(value.low, value.currency, _name) + "–" + this.formatCurrency(value.high, value.currency, !_name);
+                if (cur.pos.sym === "start") _name2 = true;
+                return this.formatCurrency(value.low, value.currency, _name2) + "–" + this.formatCurrency(value.high, value.currency, !_name2);
             }
 
             return this.formatCurrency(value.low, value.currency);
@@ -326,13 +329,13 @@ var EconCC = (function () {
         }
     }], [{
         key: "makeCurrency",
-        value: function makeCurrency(_ref2) {
-            var name = _ref2.name;
-            var symbol = _ref2.symbol;
-            var pos = _ref2.pos;
-            var round = _ref2.round;
-            var low = _ref2.low;
-            var high = _ref2.high;
+        value: function makeCurrency(_ref) {
+            var name = _ref.name;
+            var symbol = _ref.symbol;
+            var pos = _ref.pos;
+            var round = _ref.round;
+            var low = _ref.low;
+            var high = _ref.high;
 
             return {
                 internal: name,

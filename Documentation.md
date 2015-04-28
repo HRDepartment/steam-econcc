@@ -53,6 +53,8 @@ Thousand and decimal separators.
 Applies the opts to the instance (.currencies, .aliases, etc.) and calls #update.
 ##### #update() -> this
 Updates the currencies to have their BC values set up. Must be called whenever .currencies is changed, even real world currencies, otherwise you will continue using the old values.
+##### #scope(Object state, Function fn) -> this
+Creates a copy of the current state and calls #modify with the specified state. fn is then called with this instance as first argument. Finally the old state is restored using #modify. This function can be stacked. (#scope inside #scope)
 
 ##### #valueFromRange(EconCCRangedValue value) -> EconCCValue
 Converts the EconCCRangedValue to an EconCCValue based on .range.
