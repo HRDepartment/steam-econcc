@@ -1,6 +1,6 @@
 {
   "name": "steam-econcc",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Currency conversion and formatting library for Steam economy and real world currencies, based on the format used by backpack.tf.",
   "main": "index.js",
   "scripts": {
