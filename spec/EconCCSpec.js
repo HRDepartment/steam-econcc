@@ -121,7 +121,7 @@ describe("EconCC", function () {
         });
 
         it("does not repeat currencies", function () {
-            expect(f('1.4 keys:Long')).toBe('1.4 keys (23.80 ref, $2.74)');
+            expect(f('1.4 key:Long')).toBe('1.4 keys (23.80 ref, $2.74)');
         });
     });
 

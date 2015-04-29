@@ -240,7 +240,7 @@ class EconCC {
             fmt.push({str: primary, cvalue: vc._bc[this._rt()]});
         }
 
-        donecur[value.currency] = true;
+        donecur[vc.internal] = true;
         for (let cname in this.currencies) {
             let cur = this.currencies[cname];
 

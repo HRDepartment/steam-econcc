@@ -289,7 +289,7 @@ var EconCC = (function () {
                 fmt.push({ str: primary, cvalue: vc._bc[this._rt()] });
             }
 
-            donecur[value.currency] = true;
+            donecur[vc.internal] = true;
             for (var cname in this.currencies) {
                 var cur = this.currencies[cname];
 
