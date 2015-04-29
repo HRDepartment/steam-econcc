@@ -290,7 +290,7 @@ var EconCC = (function () {
             for (var cname in this.currencies) {
                 var cur = this.currencies[cname];
 
-                if (cur.hidden || cur.internal === value.currency) {
+                if (cur.internal === value.currency || label && !cur.label || !label && cur.hidden) {
                     continue;
                 }
 
@@ -336,8 +336,8 @@ var EconCC = (function () {
             return this.format({ currency: cur, value: value.low }) + (value.high ? " – " + this.format({ currency: cur, value: value.high }) : "");
         }
     }], [{
-        key: "makeCurrency",
-        value: function makeCurrency(_ref) {
+        key: "_makeRWC",
+        value: function _makeRWC(_ref) {
             var name = _ref.name;
             var symbol = _ref.symbol;
             var pos = _ref.pos;
@@ -386,7 +386,7 @@ var EconCC = (function () {
 
             var plistkeys = Object.keys(pricelist);
             var currs = {
-                usd: EconCC.makeCurrency({
+                usd: EconCC._makeRWC({
                     name: "usd",
                     symbol: "$",
                     pos: { sym: "start", fmt: 99 },
@@ -420,7 +420,8 @@ var EconCC = (function () {
                     round: cobj.round,
                     pos: { fmt: pos },
                     hidden: !!cobj.blanket,
-                    trailing: false
+                    trailing: false,
+                    label: !cobj.blanket
                 };
 
                 aliases[cobj.single] = aliases[cobj.plural] = cname;

@@ -241,7 +241,7 @@ class EconCC {
         for (let cname in this.currencies) {
             let cur = this.currencies[cname];
 
-            if (cur.hidden || cur.internal === value.currency) {
+            if (cur.internal === value.currency || (label && !cur.label) || (!label && cur.hidden)) {
                 continue;
             }
 
@@ -280,7 +280,7 @@ class EconCC {
         return this.format({currency: cur, value: value.low}) + (value.high ? " – " + this.format({currency: cur, value: value.high}) : "");
     }
 
-    static makeCurrency({name, symbol, pos, round, low, high}) {
+    static _makeRWC({name, symbol, pos, round, low, high}) {
         return {
             internal: name,
             rwc: true,
@@ -319,7 +319,7 @@ class EconCC {
 
         let plistkeys = Object.keys(pricelist);
         let currs = {
-            "usd": EconCC.makeCurrency({
+            "usd": EconCC._makeRWC({
                 name: "usd",
                 symbol: "$",
                 pos: {sym: "start", fmt: 99},
@@ -353,7 +353,8 @@ class EconCC {
                 round: cobj.round,
                 pos: {fmt: pos},
                 hidden: !!cobj.blanket,
-                trailing: false
+                trailing: false,
+                label: !cobj.blanket
             };
 
             aliases[cobj.single] = aliases[cobj.plural] = cname;

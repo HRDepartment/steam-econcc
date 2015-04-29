@@ -15,19 +15,46 @@ EconCC.Range.{Low, Mid, High}
 * High: High-end of the range
 
 ##### interface EconCCValue (Object)
-* value: Value in the respective currency.
-* currency: {String currency.internal} of the value.
+* Number value: Value in the respective currency.
+* String currency: {String currency.internal} of the value.
 
 ##### interface EconCCRangedValue (Object)
-* low: Low value.
-* high?: High value. If not defined, considered equal to low.
-* currency: {String currency.internal} of the value.
+* Number low: Low value.
+* Number high?: High value. If not defined, considered equal to low.
+* String currency: {String currency.internal} of the value.
 
-##### type EconCCCurrency (Object/String)
+##### interface EconCCCurrencySpecification (Object)
+
+Shared (real world currency and game currency)
+
+* String internal: Internal name of the currency, the key of the object in an EconCC instance's currencies object.
+* Boolean trailing: Whether this currency accepts trailing zeros. (used by EconCC.Auto)
+* Number low: (RWC: low-end value of how much 1 bc is worth in the currency; GC: low-end value of the currency)
+* Number high: High-end value of the above.
+* Number round: How many decimal places this currency should be rounded to.
+* Boolean hidden: Whether this currency is hidden in extended formatting (Mode = Long).
+* Boolean label: Whether this currency is shown in labels (Mode = Label).
+* Object _bc{Number low, Number mid, Number high}: (RWC: equivalent to .low/.high; GC: How much 1 of this currency is worth in the BC.) (updated by #update())
+
+RWC-specific
+
+* Boolean rwc: Whether this currency is an RWC.
+* String symbol: Symbol used to identify the currency.
+* Object pos{String sym, Number fmt}: Position of the symbol ("start"/"end" of the number) and format order. (lower is better)
+
+GC-specific
+
+* String currency: Internal name of the currency this currency is priced in.
+* Array names[String singular, String plural]: Name of the currency. (singular/plural)
+* Boolean bc: Whether this currency is the BC. (BC-only)
+* Number step: Step value of the currency. Decimals are rounded to the nearest (step). (step = 0.055; 0.06 -> 0.05, 0.90 -> 0.88, 0.32 -> 0.33)
+* Object pos{Number fmt}: Format order. (lower is better)
+
+##### typedef EconCCCurrency EconCCCurrencySpecification|String
 A currency alias, a currency's {currency.internal}, or a currency object (in .currencies).
 
-##### type EconCCNumberValue (Object/Number)
-Value in Number or an Object containg a 'value' property, such as EconCCValue. A EconCCNumberValue as Object can also contain .currency which will be used as currency for functions that require them.
+##### typedef EconCCNumberValue Object{Number value, String currency?}|Number
+Value in Number or an Object containg a 'value' property, such as EconCCValue. A EconCCNumberValue as Object can also contain .currency which will be used as currency for functions that require them. Such functions always offer an argument that can be populated manually.
 
 ##### EconCC.iFromBackpack(Object item) -> EconCCRangedValue
 Converts an item's value in backpack.tf IGetPrices v4 format to EconCC format.
@@ -37,7 +64,7 @@ Returns an object containing currencies from backpack.tf's IGetCurrencies(v1)/IG
 ##### #constructor(Object currencies?, Object pricelist?) -> EconCC instance
 Initializes this EconCC instance. If pricelist is specified, currencies and pricelist are passed to EconCC.cFromBackpack and imported. Otherwise, currencies (here, poorly named) is passed to #modify (can also be empty).
 ##### .currencies (Object)
-Object containing this instance's currencies. **Call #update after modifying this object.**
+Object containing this instance's currencies (EconCCCurrencySpecification). **Call #update after modifying this object.**
 ##### .aliases (Object)
 (String)alias->(String)currency.internal key-value pair. Essentially additional names for currencies, when referenced by code.
 ##### .step (EconCC.Enabled/EconCC.Disabled) = EconCC.Disabled

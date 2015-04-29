@@ -102,10 +102,22 @@ describe("EconCC", function () {
             expect(f('100 hat:Long')).toBe('100 hats (133.00 ref, 7.8 keys, 1.45 buds, $15.29)');
         });
 
-        it("should select most expensive currency when mode is Label", function () {
-            expect(f('15 metal:Label')).toBe('15.00 ref');
-            expect(f('18 metal:Label')).toBe('1.06 keys');
-            expect(f('100 metal:Label')).toBe('1.09 buds');
+        describe("Mode = Label", function () {
+            it("selects the most expensive currency", function () {
+                expect(f('15 usd:Label')).toBe('1.43 buds');
+                expect(f('15 metal:Label')).toBe('15.00 ref');
+                expect(f('18 metal:Label')).toBe('1.06 keys');
+                expect(f('100 metal:Label')).toBe('1.09 buds');
+            });
+
+            it("ignores currencies when cur.label = false", function () {
+                ec.currencies.earbuds.label = false;
+
+                expect(f('1 usd:Label')).toBe('$1.00');
+                expect(f('10 metal:Label')).toBe('10.00 ref');
+                expect(f('100 usd:Label')).toBe('51.15 keys');
+                expect(f('100 metal:Label')).toBe('5.88 keys');
+            });
         });
     });
 
