@@ -13,7 +13,7 @@ describe("EconCC", function () {
     });
 
     describe("#format", function () {
-        it("should format usd", function () {
+        it("formats usd", function () {
             expect(f('1 usd')).toBe('$1.00');
             expect(f('1 usd:Long')).toBe('$1.00 (8.70 ref)');
             expect(f('1-2 usd')).toBe('$1.50');
@@ -24,7 +24,7 @@ describe("EconCC", function () {
             expect(f('100 usd:Long')).toBe('$100.00 (869.57 ref, 51.15 keys, 9.52 buds)');
         });
 
-        it("should format metal", function () {
+        it("formats metal", function () {
             expect(f('0.01 metal')).toBe('0.01 ref');
 
             expect(f('1 metal')).toBe('1.00 ref');
@@ -37,7 +37,7 @@ describe("EconCC", function () {
             expect(f('100 metal:Long')).toBe('100.00 ref (5.88 keys, 1.09 buds, $11.50)');
         });
 
-        it("should format hat", function () {
+        it("formats hat", function () {
             expect(f('1 hat')).toBe('1 hat');
             expect(f('1 hat:Long')).toBe('1 hat (1.33 ref, $0.15)');
             expect(f('1-2 hat')).toBe('1.5 hats');
@@ -48,7 +48,7 @@ describe("EconCC", function () {
             expect(f('100 hat:Long')).toBe('100 hats (133.00 ref, 7.82 keys, 1.46 buds, $15.29)');
         });
 
-        it("should format keys", function () {
+        it("formats keys", function () {
             expect(f('1 keys')).toBe('1 key');
             expect(f('1 keys:Long')).toBe('1 key (17.00 ref, $1.95)');
             expect(f('1-2 keys')).toBe('1.5 keys');
@@ -59,7 +59,7 @@ describe("EconCC", function () {
             expect(f('100 keys:Long')).toBe('100 keys (1,700.00 ref, 18.6 buds, $195.50)');
         });
 
-        it("should format earbuds", function () {
+        it("formats earbuds", function () {
             expect(f('1 earbuds')).toBe('1 bud');
             expect(f('1 earbuds:Long')).toBe('1 bud (91.38 ref, 5.38 keys, $10.51)');
             expect(f('1-2 earbuds')).toBe('1.5 buds');
@@ -70,19 +70,19 @@ describe("EconCC", function () {
             expect(f('100 earbuds:Long')).toBe('100 buds (9,137.50 ref, 537.5 keys, $1,050.81)');
         });
 
-        it("should use the thousand separator", function () {
+        it("uses the thousand separator", function () {
             ec.separators.thousand = "!";
 
             expect(f('100 earbuds:Long')).toBe('100 buds (9!137.50 ref, 537.5 keys, $1!050.81)');
         });
 
-        it("should use the decimal separator", function () {
+        it("uses the decimal separator", function () {
             ec.separators.decimal = "!";
 
             expect(f('100 earbuds:Long')).toBe('100 buds (9,137!50 ref, 537!5 keys, $1,050!81)');
         });
 
-        it("should accept EconCCValues", function () {
+        it("accepts EconCCValues", function () {
             expect(ec.format({value: 1, currency: 'metal'})).toBe('1.00 ref');
         });
 
@@ -119,24 +119,28 @@ describe("EconCC", function () {
                 expect(f('100 metal:Label')).toBe('5.88 keys');
             });
         });
+
+        it("does not repeat currencies", function () {
+            expect(f('1.4 keys:Long')).toBe('1.4 keys (23.80 ref, $2.74)');
+        });
     });
 
     describe("#convertToCurrency", function () {
-        it("should convert hats to metal", function () {
+        it("converts hats to metal", function () {
             expect(ec.convertToCurrency(1, 'hat', 'metal')).toEqual({value: 1.33, currency: 'metal'});
         });
-        it("should convert earbuds to hats", function () {
+        it("converts earbuds to hats", function () {
             expect(ec.convertToCurrency(1.52, 'earbuds', 'hat')).toEqual({value: 104.42857142857143, currency: 'hat'});
         });
     });
 
     describe("#formatCurrency", function () {
-        it("should format keys", function () {
+        it("formats keys", function () {
             expect(ec.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.2 keys');
         });
 
         describe("(trailing)", function () {
-            it("should format keys", function () {
+            it("formats keys", function () {
                 ec.trailing = EconCC.Enabled;
                 expect(ec.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.20 keys');
             });
@@ -144,13 +148,13 @@ describe("EconCC", function () {
     });
 
     describe("#_gc", function () {
-        it("should accept currency objects", function () {
+        it("accepts currency objects", function () {
             expect(ec._gc(ec.currencies.metal)).toBe(ec.currencies.metal);
         });
-        it("should accept internal names", function () {
+        it("accepts internal names", function () {
             expect(ec._gc("metal")).toBe(ec.currencies.metal);
         });
-        it("should convert aliases", function () {
+        it("converts aliases", function () {
             expect(ec._gc("buds")).toBe(ec.currencies.earbuds);
         });
     });

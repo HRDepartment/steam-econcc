@@ -230,18 +230,21 @@ class EconCC {
             return primary;
         }
 
-        let fmt = [];
-        let label = mode === EconCC.Mode.Label;
-        let threshold = label ? 1 : 0.8;
+        let vc = this._gc(value.currency),
+            fmt = [],
+            donecur = {},
+            label = mode === EconCC.Mode.Label,
+            threshold = label ? 1 : 0.8;
 
         if (label) {
-            fmt.push({str: primary, cvalue: this._gc(value.currency)._bc[this._rt()]});
+            fmt.push({str: primary, cvalue: vc._bc[this._rt()]});
         }
 
+        donecur[value.currency] = true;
         for (let cname in this.currencies) {
             let cur = this.currencies[cname];
 
-            if (cur.internal === value.currency || (label && !cur.label) || (!label && cur.hidden)) {
+            if (cur.internal === value.currency || donecur[cname] || (label && !cur.label) || (!label && cur.hidden)) {
                 continue;
             }
 
@@ -253,9 +256,10 @@ class EconCC {
             let obj = {str: this.formatCurrency(val), fmt: cur.pos.fmt};
 
             if (label) {
-                obj.cvalue = this._gc(val.currency)._bc[this._rt()];
+                obj.cvalue = cur._bc[this._rt()];
             }
 
+            donecur[cname] = true;
             fmt.push(obj);
         }
 

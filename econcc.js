@@ -279,18 +279,21 @@ var EconCC = (function () {
                 return primary;
             }
 
-            var fmt = [];
-            var label = mode === EconCC.Mode.Label;
-            var threshold = label ? 1 : 0.8;
+            var vc = this._gc(value.currency),
+                fmt = [],
+                donecur = {},
+                label = mode === EconCC.Mode.Label,
+                threshold = label ? 1 : 0.8;
 
             if (label) {
-                fmt.push({ str: primary, cvalue: this._gc(value.currency)._bc[this._rt()] });
+                fmt.push({ str: primary, cvalue: vc._bc[this._rt()] });
             }
 
+            donecur[value.currency] = true;
             for (var cname in this.currencies) {
                 var cur = this.currencies[cname];
 
-                if (cur.internal === value.currency || label && !cur.label || !label && cur.hidden) {
+                if (cur.internal === value.currency || donecur[cname] || label && !cur.label || !label && cur.hidden) {
                     continue;
                 }
 
@@ -302,9 +305,10 @@ var EconCC = (function () {
                 var obj = { str: this.formatCurrency(val), fmt: cur.pos.fmt };
 
                 if (label) {
-                    obj.cvalue = this._gc(val.currency)._bc[this._rt()];
+                    obj.cvalue = cur._bc[this._rt()];
                 }
 
+                donecur[cname] = true;
                 fmt.push(obj);
             }
 
