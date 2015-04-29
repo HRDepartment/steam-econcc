@@ -97,6 +97,7 @@ describe("EconCC", function () {
             expect(f('0.98 metal')).toBe('1.00 ref');
             expect(f('0.99 metal')).toBe('1.00 ref');
             expect(f('8139.99 metal')).toBe('8,140.00 ref');
+            expect(ec.format({low: 0.11, high: 0.12, currency: 'usd'})).toBe('$0.12');
 
             expect(f('100 hat:Long')).toBe('100 hats (133.00 ref, 7.8 keys, 1.45 buds, $15.29)');
         });

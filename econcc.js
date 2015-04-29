@@ -64,7 +64,7 @@ var EconCC = (function () {
                 while (next && !(next.bc || next.rwc)) {
                     low *= next.low;
                     if (high) {
-                        mid *= next.high ? (next.low + next.high) / 2 : next.low;
+                        mid *= next.high ? this._floatdiv(next.low + next.high, 2, next.round) : next.low;
                         high *= next.high || next.low;
                     }
 
@@ -92,7 +92,7 @@ var EconCC = (function () {
                         res.value = value.low;
                         break;
                     case EconCC.Range.Mid:
-                        res.value = value.high ? (value.low + value.high) / 2 : value.low;
+                        res.value = value.high ? this._floatdiv(value.low + value.high, 2, this._gc(currency).round) : value.low;
                         break;
                     case EconCC.Range.High:
                         res.value = value.high || value.low;
@@ -112,6 +112,17 @@ var EconCC = (function () {
             }
 
             return cur;
+        }
+    }, {
+        key: "_floatdiv",
+        value: function _floatdiv(a, b) {
+            var acc = arguments[2] === undefined ? 2 : arguments[2];
+            var round = arguments[3] === undefined ? function (n) {
+                return n;
+            } : arguments[3];
+
+            var p = Math.pow(10, acc < 2 ? 2 : acc);
+            return round(a * p / b) / p;
         }
     }, {
         key: "_rt",
@@ -151,7 +162,7 @@ var EconCC = (function () {
                 currency = this._gc(currency);
                 value = typeof value === "object" ? value.value : value;
 
-                return !currency || currency.bc || currency.rwc ? value : value / currency._bc[this._rt()];
+                return !currency || currency.bc || currency.rwc ? value : this._floatdiv(value, currency._bc[this._rt()], currency.round);
             }).apply(this, arguments);
         }
     }, {
@@ -168,7 +179,7 @@ var EconCC = (function () {
             value = typeof value === "object" ? value.value : value || 0;
 
             var ret = { currency: newc.internal };
-            if (oldcc.rwc) value = value / oldcc._bc[this._rt()];
+            if (oldcc.rwc) value = this._floatdiv(value, oldcc._bc[this._rt()], oldcc.round);
             if (newc.bc) {
                 ret.value = this.convertToBC(value, oldc);
             } else if (newc.rwc) {
@@ -206,8 +217,7 @@ var EconCC = (function () {
                 var trailing = cur.rwc || this.trailing === EconCC.Auto ? cur.trailing : this.trailing;
 
                 if (this.step !== EconCC.Disabled && cur.step && val >= cur.step) {
-                    var pow = Math.pow(10, cur.round < 2 ? 2 : cur.round);
-                    val = (Math.floor(val) + Math.floor(Math.round(val % 1 / cur.step) / Math.floor(1 / cur.step) * pow) / pow).toFixed(cur.round);
+                    val = (Math.floor(val) + this._floatdiv(Math.round(val % 1 / cur.step), Math.floor(1 / cur.step), cur.round, Math.floor)).toFixed(cur.round);
                     if (!trailing) val = +val;
                 } else {
                     // separated for readability

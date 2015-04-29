@@ -49,7 +49,7 @@ class EconCC {
             while (next && !(next.bc || next.rwc)) {
                 low *= next.low;
                 if (high) {
-                    mid *= (next.high ? (next.low + next.high) / 2 : next.low);
+                    mid *= (next.high ? this._floatdiv(next.low + next.high, 2, next.round) : next.low);
                     high *= next.high || next.low;
                 }
 
@@ -74,7 +74,7 @@ class EconCC {
             res.value = value.low;
             break;
         case EconCC.Range.Mid:
-            res.value = value.high ? (value.low + value.high) / 2 : value.low;
+            res.value = value.high ? this._floatdiv(value.low + value.high, 2, this._gc(currency).round) : value.low;
             break;
         case EconCC.Range.High:
             res.value = value.high || value.low;
@@ -92,6 +92,11 @@ class EconCC {
         }
 
         return cur;
+    }
+
+    _floatdiv(a, b, acc=2, round=(n => n)) {
+        let p = Math.pow(10, acc < 2 ? 2 : acc);
+        return round(a * p / b) / p;
     }
 
     _rt() { return EconCC.RangeTag[this.range]; }
@@ -118,7 +123,7 @@ class EconCC {
         currency = this._gc(currency);
         value = typeof value === 'object' ? value.value : value;
 
-        return (!currency || currency.bc || currency.rwc) ? value : value / currency._bc[this._rt()];
+        return (!currency || currency.bc || currency.rwc) ? value : this._floatdiv(value, currency._bc[this._rt()], currency.round);
     }
 
     convertToCurrency(value, oldc, newc) {
@@ -133,7 +138,7 @@ class EconCC {
         value = typeof value === 'object' ? value.value : (value || 0);
 
         let ret = {currency: newc.internal};
-        if (oldcc.rwc) value = value / oldcc._bc[this._rt()];
+        if (oldcc.rwc) value = this._floatdiv(value, oldcc._bc[this._rt()], oldcc.round);
         if (newc.bc) {
             ret.value = this.convertToBC(value, oldc);
         } else if (newc.rwc) {
@@ -165,10 +170,9 @@ class EconCC {
             val = +((typeof value === 'number' ? value : value.value).toFixed(cur.round));
         let trailing = (cur.rwc || this.trailing === EconCC.Auto) ? cur.trailing : this.trailing;
 
-        if (this.step !== EconCC.Disabled
-            && cur.step && val >= cur.step) {
-            let pow = Math.pow(10, cur.round < 2 ? 2 : cur.round);
-            val = (Math.floor(val) + Math.floor(Math.round(val % 1 / cur.step) / Math.floor(1 / cur.step) * pow) / pow).toFixed(cur.round);
+        if (this.step !== EconCC.Disabled &&
+            cur.step && val >= cur.step) {
+            val = (Math.floor(val) + this._floatdiv(Math.round(val % 1 / cur.step), Math.floor(1 / cur.step), cur.round, Math.floor)).toFixed(cur.round);
             if (!trailing) val = +val;
         } else { // separated for readability
             if (trailing) {
