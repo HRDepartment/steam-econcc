@@ -14,17 +14,20 @@ EconCC.Range.{Low, Mid, High}
 * Mid: Average of low and high
 * High: High-end of the range
 
-##### interface EconCCValue (Object)
+##### interface EconCCValue
 * Number value: Value in the respective currency.
 * String currency: {String currency.internal} of the value.
 
-##### interface EconCCRangedValue (Object)
+##### interface EconCCRangedValue
 * Number low: Low value.
 * Number high?: High value. If not defined, considered equal to low.
 * String currency: {String currency.internal} of the value.
 
-##### interface EconCCCurrencySpecification (Object)
+##### interface EconCCSCMValue
+* EconCCValue seller: What the seller receives from an SCM purchase (with 15% tax applied)
+* EconCCValue buyer: What the buyer has to pay for an SCM purchase
 
+##### interface EconCCCurrencySpecification
 Shared (real world currency and game currency)
 
 * String internal: Internal name of the currency, the key of the object in an EconCC instance's currencies object.
@@ -53,8 +56,8 @@ GC-specific
 ##### typedef EconCCCurrency EconCCCurrencySpecification|String
 A currency alias, a currency's {currency.internal}, or a currency object (in .currencies).
 
-##### typedef EconCCNumberValue Object{Number value, String currency?}|Number
-Value in Number or an Object containg a 'value' property, such as EconCCValue. A EconCCNumberValue as Object can also contain .currency which will be used as currency for functions that require them. Such functions always offer an argument that can be populated manually.
+##### typedef EconCCNumberValue Object{Number value}|Number
+Value in Number or an Object containg a 'value' property, such as EconCCValue. An EconCCNumberValue as Object can also contain .currency which will be used as currency for functions that require them. Such functions always offer an argument that can be populated manually.
 
 ##### EconCC.iFromBackpack(Object item) -> EconCCRangedValue
 Converts an item's value in backpack.tf IGetPrices v4 format to EconCC format.
@@ -104,13 +107,23 @@ Important to note: the range separator is not - (HYPHEN-MINUS U+002D) but instea
 ##### #formatCurrency(EconCCNumberValue value, EconCCCurrency currency=value.currency, Boolean name=true) -> String
 Formats an EconCC(Number)Value, including trailing zeros, step, and rounding. If name is not false, this function will also add the currency's name according to the amount (singular/plural).
 
-##### #f(String value) -> String
+##### #parse(String value) -> EconCCRangedValue
 Helper function for #format. value's format is `low-high currency:mode`, examples:
 * 1-2 ref:Long
 * 1 key:Short
 * 1 hat
 
+An additional 'mode' property is available, which contains the computed mode. (mode as int)
+
+##### #f(String value) -> String
+Helper function for #format. Parses the value with #parse, and calls #format with the result.
+
 Mode defaults to EconCC.Mode.Short.
+
+##### #scm(EconCCValue|EconCCRangedValue value) -> EconCCSCMValue
+Returns what the buyer/seller has to pay for/receives from an SCM purchase. value is casted to an EconCCRangedValue using #valueFromRange.
+
+The EConCCSCMValue's seller property is always a copy of value and never a reference.
 
 ##### #format(EconCCRangedValue|EconCCValue value, enum EconCC.Mode mode=EconCC.Mode.Short) -> String
 Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to EconCCValue using #valueFromRange). Each mode has its own special formatting:

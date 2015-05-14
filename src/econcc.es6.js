@@ -69,6 +69,11 @@ class EconCC {
     valueFromRange(value, currency=value.currency) {
         let res = {currency};
 
+        if (typeof value.value !== 'undefined') {
+            res.value = value.value;
+            return res;
+        }
+
         switch (this.range) {
         case EconCC.Range.Low:
             res.value = value.low;
@@ -94,12 +99,15 @@ class EconCC {
         return cur;
     }
 
-    _floatdiv(a, b, acc=2, round=(n => n)) {
+    _floatdiv(a, b, acc=2, round=((n) => n)) {
         let p = Math.pow(10, acc < 2 ? 2 : acc);
         return round(a * p / b) / p;
     }
 
-    _rt() { return EconCC.RangeTag[this.range]; }
+    _rt() {
+        return EconCC.RangeTag[this.range];
+    }
+
     _sepnum(num) {
         return ("" + num).replace(/\B(?=(\d{3})+(?!\d))/g, this.separators.thousand).replace(/\./g, this.separators.decimal);
     }
@@ -174,7 +182,7 @@ class EconCC {
             cur.step && val >= cur.step) {
             val = (Math.floor(val) + this._floatdiv(Math.round(val % 1 / cur.step), Math.floor(1 / cur.step), cur.round, Math.floor)).toFixed(cur.round);
             if (!trailing) val = +val;
-        } else { // separated for readability
+        } else {
             if (trailing) {
                 val = val.toFixed(cur.round); // Add back any trailing zeros
             }
@@ -198,16 +206,18 @@ class EconCC {
         return str;
     }
 
+    parse(str) {
+        let parts = str.split(" ");
+        let range = parts[0].split("-");
+        let mode = parts[1].split(":");
+
+        return {currency: mode[0], low: +(range[0].replace(/,/g, "")), high: range[1] ? +(range[1].replace(/,/g, "")) : undefined, mode: EconCC.Mode[mode[1]]};
+    }
+
     // Helper for consumers
     f(str) {
-        let parts = str.split(" "),
-            range = parts[0].split("-"),
-            mode = parts[1].split(":");
-
-        return this.format(
-            {currency: mode[0], low: +(range[0].replace(/,/g, "")), high: range[1] ? +(range[1].replace(/,/g, "")) : undefined},
-            EconCC.Mode[mode[1]]
-        );
+        let value = this.parse(str);
+        return this.format(value, value.mode);
     }
 
     format(value, mode=EconCC.Mode.Short) {
@@ -284,6 +294,16 @@ class EconCC {
         return this.format({currency: cur, value: value.low}) + (value.high ? " – " + this.format({currency: cur, value: value.high}) : "");
     }
 
+    scm(val) {
+        let {value, currency} = this.valueFromRange(val);
+        let svalue = Math.max(value - Math.max(value * 0.05, 0.01) - Math.max(value * 0.1, 0.01), 0.01);
+
+        return {
+            buyer: {currency, value},
+            seller: {currency, value: svalue}
+        };
+    }
+
     static _makeRWC({name, symbol, pos, round, low, high}) {
         return {
             internal: name,
@@ -348,6 +368,7 @@ class EconCC {
             if (!plist) throw new Error("Unknown defindex " + cobj.defindex + " not in pricelist");
 
             let iprice = plist.prices[cobj.quality][cobj.tradable][cobj.craftable][0];
+            let hidden = cobj.blanket || cobj.hidden;
             let curn = currs[cname] = {
                 internal: cname,
                 currency: iprice.currency,
@@ -356,9 +377,9 @@ class EconCC {
                 names: [cobj.single, cobj.plural],
                 round: cobj.round,
                 pos: {fmt: pos},
-                hidden: !!cobj.blanket,
-                trailing: false,
-                label: !cobj.blanket
+                hidden: !!hidden,
+                label: !hidden,
+                trailing: false
             };
 
             aliases[cobj.single] = aliases[cobj.plural] = cname;
@@ -387,17 +408,4 @@ EconCC.Auto = 2;
 EconCC.Enabled = 1;
 EconCC.Disabled = 0;
 
-// Export
-if (typeof module === 'object' && module.exports) {
-    module.exports = EconCC;
-} else if (typeof define === 'function' && define.amd) {
-    define([], EconCC);
-} else {
-    let glob = function () { return this; }.apply(null);
-
-    if (typeof global === 'object') glob = global;
-    else if (typeof window === 'object') glob = window;
-    else if (typeof self === 'object') glob = self;
-
-    glob.EconCC = EconCC;
-}
+export default EconCC;

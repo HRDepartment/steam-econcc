@@ -1,1 +1,1 @@
-module.exports = require('./econcc.js');
+module.exports = require('./econcc.js')["default"];

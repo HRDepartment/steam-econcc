@@ -9,16 +9,15 @@ EconCC has no dependencies and is supported on node.js/io.js and the browser (ES
 npm: `npm install --save steam-econcc`
 
 ### Examples
-
 See [EconCCSpec.js](spec/EconCCSpec.js) for some example usage.
 
 ### Documentation
-
 See [Documentation.md](Documentation.md).
 
 ### Testing
-
 Tests are written using jasmine. Install the test runner globally (`npm install -g jasmine`) and run `npm test` in the root directory.
+
+Compile the source with: `babel src/econcc.es6.js --no-comments -m umdStrict --module-id EconCC > econcc.js`
 
 ### License
 

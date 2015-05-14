@@ -86,7 +86,7 @@ describe("EconCC", function () {
             expect(ec.format({value: 1, currency: 'metal'})).toBe('1.00 ref');
         });
 
-        it("should step", function () {
+        it("uses step", function () {
             ec.step = EconCC.Enabled;
 
             expect(f('0.01 metal')).toBe('0.01 ref');
@@ -144,6 +144,32 @@ describe("EconCC", function () {
                 ec.trailing = EconCC.Enabled;
                 expect(ec.formatCurrency({value: 13.2, currency: 'keys'})).toBe('13.20 keys');
             });
+        });
+    });
+
+    describe("#parse", function () {
+        it("parses value", function () {
+            expect(ec.parse("1 ref")).toEqual({low: 1, currency: 'ref', high: undefined, mode: undefined});
+        });
+        it("parses range", function () {
+            expect(ec.parse("1-2 ref")).toEqual({low: 1, high: 2, currency: 'ref', mode: undefined});
+        });
+        it("parses mode", function () {
+            expect(ec.parse("1 ref:Long")).toEqual({low: 1, currency: 'ref', mode: EconCC.Mode.Long, high: undefined});
+        });
+        it("parses range+mode", function () {
+            expect(ec.parse("1-2 ref:Long")).toEqual({low: 1, high: 2, currency: 'ref', mode: EconCC.Mode.Long});
+        });
+    });
+
+    describe("#scm", function () {
+        it("creates a copy of the value", function () {
+            var v = {value: 0.01, currency: 'usd'};
+            expect(ec.scm(v).buyer).not.toBe(v);
+            expect(ec.scm(v).buyer).toEqual(v);
+        });
+        it("calculates the SCM seller price", function () {
+            expect(ec.scm({low: 0.03, currency: 'usd'}).seller).toEqual({value: 0.01, currency: 'usd'});
         });
     });
 
