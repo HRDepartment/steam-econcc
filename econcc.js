@@ -17,6 +17,8 @@
 
     var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+    var nondec = /[^\d\.\-e+]/g;
+
     var EconCC = (function () {
         function EconCC(currencies, pricelist) {
             _classCallCheck(this, EconCC);
@@ -42,12 +44,46 @@
             value: function modify() {
                 var state = arguments[0] === undefined ? {} : arguments[0];
 
+                function copy(o) {
+                    var c = {};
+
+                    for (var v in o) {
+                        if (typeof o[v] == "object") {
+                            c[v] = copy(o[v]);
+                        } else {
+                            c[v] = o[v];
+                        }
+                    }
+
+                    return c;
+                }
+
+                function patch(val, withVal) {
+                    var c = copy(val);
+
+                    for (var v in withVal) {
+                        var wv = withVal[v];
+
+                        if (typeof wv === "object") {
+                            c[v] = patch(c[v] || {}, wv);
+                        } else {
+                            c[v] = wv;
+                        }
+                    }
+
+                    return c;
+                }
+
                 for (var _name in state) {
-                    var val = state[_name],
-                        _self = this[_name];
+                    var val = state[_name];
+                    var _self = this[_name];
 
                     if (val !== undefined && typeof _self !== "undefined" && typeof _self !== "function") {
-                        this[_name] = val;
+                        if (typeof val === "object") {
+                            this[_name] = patch(_self, val);
+                        } else {
+                            this[_name] = val;
+                        }
                     }
 
                     if (_name === "currencies") this.update();
@@ -118,31 +154,54 @@
                 }).apply(this, arguments);
             }
         }, {
+            key: "_rc",
+            value: function _rc(currency) {
+                var co = typeof currency === "object" && currency.internal && this.currencies[currency.internal] ? currency : undefined;
+                return this.aliases[currency] ? this.currencies[this.aliases[currency]] : this.currencies[currency] || co;
+            }
+        }, {
             key: "_gc",
             value: function _gc(currency) {
-                var cur = this.aliases[currency] ? this.currencies[this.aliases[currency]] : this.currencies[currency] || currency;
+                var cur = this._rc(currency);
 
                 if (!cur || typeof cur !== "object") {
-                    throw new Error("no such currency: " + currency + " | currencies: " + Object.keys(this.currencies) + " / aliases: " + Object.keys(this.aliases));
+                    throw new TypeError("no such currency: " + currency + " | currencies: " + Object.keys(this.currencies) + " / aliases: " + Object.keys(this.aliases));
                 }
 
                 return cur;
             }
         }, {
+            key: "_vv",
+            value: function _vv(value) {
+                if (typeof value === "object") {
+                    if (typeof value.low === "number") {
+                        return this.valueFromRange(value).value;
+                    } else if (typeof value.value === "number") {
+                        return value.value;
+                    } else {
+                        return 0;
+                    }
+                }
+
+                return value || 0;
+            }
+        }, {
             key: "_floatdiv",
             value: function _floatdiv(a, b) {
                 var acc = arguments[2] === undefined ? 2 : arguments[2];
-                var round = arguments[3] === undefined ? function (n) {
-                    return n;
-                } : arguments[3];
+                var round = arguments[3] === undefined ? null : arguments[3];
 
                 var p = Math.pow(10, acc < 2 ? 2 : acc);
-                return round(a * p / b) / p;
+                var fn = round || function (n) {
+                    return n;
+                };
+
+                return fn(a * p / b) / p;
             }
         }, {
-            key: "_rt",
-            value: function _rt() {
-                return EconCC.RangeTag[this.range];
+            key: "_brt",
+            value: function _brt(currency) {
+                return currency._bc[EconCC.RangeTag[this.range]];
             }
         }, {
             key: "_sepnum",
@@ -159,14 +218,25 @@
                 return this.modify(self);
             }
         }, {
+            key: "isCurrency",
+            value: function isCurrency(cur) {
+                if (typeof cur === "object") {
+                    if (cur.currency) cur = cur.currency;else if (!cur.internal) {
+                        return false;
+                    }
+                }
+
+                return !!this._rc(cur);
+            }
+        }, {
             key: "convertToBC",
             value: function convertToBC(value) {
                 var currency = arguments[1] === undefined ? value.currency : arguments[1];
                 return (function () {
-                    currency = this._gc(currency);
-                    value = typeof value === "object" ? value.value : value;
+                    var cur = this._gc(currency);
+                    var val = this._vv(value);
 
-                    return !currency || currency.bc || currency.rwc ? value : value * currency._bc[this._rt()];
+                    return !cur || cur.bc || cur.rwc ? val : val * this._brt(cur);
                 }).apply(this, arguments);
             }
         }, {
@@ -174,10 +244,10 @@
             value: function convertFromBC(value) {
                 var currency = arguments[1] === undefined ? value.currency : arguments[1];
                 return (function () {
-                    currency = this._gc(currency);
-                    value = typeof value === "object" ? value.value : value;
+                    var cur = this._gc(currency);
+                    var val = this._vv(value);
 
-                    return !currency || currency.bc || currency.rwc ? value : this._floatdiv(value, currency._bc[this._rt()], currency.round);
+                    return !cur || cur.bc || cur.rwc ? val : this._floatdiv(val, this._brt(cur), cur.round);
                 }).apply(this, arguments);
             }
         }, {
@@ -191,14 +261,14 @@
                 var oldcc = this._gc(oldc);
 
                 newc = this._gc(newc);
-                value = typeof value === "object" ? value.value : value || 0;
+                value = this._vv(value);
 
                 var ret = { currency: newc.internal };
-                if (oldcc.rwc) value = this._floatdiv(value, oldcc._bc[this._rt()], oldcc.round);
+                if (oldcc.rwc) value = this._floatdiv(value, this._brt(oldcc), oldcc.round);
                 if (newc.bc) {
                     ret.value = this.convertToBC(value, oldc);
                 } else if (newc.rwc) {
-                    ret.value = this.convertToBC(value, oldc) * newc._bc[this._rt()];
+                    ret.value = this.convertToBC(value, oldc) * this._brt(newc);
                 } else {
                     ret.value = this.convertFromBC(this.convertToBC(value, oldc), newc);
                 }
@@ -226,7 +296,7 @@
                 return (function () {
                     var cur = this._gc(currency);
                     var str = "",
-                        val = +(typeof value === "number" ? value : value.value).toFixed(cur.round);
+                        val = +this._vv(value).toFixed(cur.round);
                     var trailing = cur.rwc || this.trailing === EconCC.Auto ? cur.trailing : this.trailing;
 
                     if (this.step !== EconCC.Disabled && cur.step && val >= cur.step) {
@@ -260,10 +330,38 @@
             key: "parse",
             value: function parse(str) {
                 var parts = str.split(" ");
-                var range = parts[0].split("-");
-                var mode = parts[1].split(":");
+                var range = (parts[0] || "").split(/-|–/);
+                var mode = (parts[1] || "").split(":");
+                var currency = mode[0];
+                var fmtmode = mode[1];
 
-                return { currency: mode[0], low: +range[0].replace(/,/g, ""), high: range[1] ? +range[1].replace(/,/g, "") : undefined, mode: EconCC.Mode[mode[1]] };
+                if (!this.isCurrency(currency)) {
+                    for (var cname in this.currencies) {
+                        var cur = this.currencies[cname];
+                        var sym = cur.symbol;
+
+                        if (!sym) continue;
+                        var pos = cur.pos.sym;
+                        var start = (range[0] || "")[0];
+                        var end = range[1] ? range[1].slice(-1) : "";
+
+                        if (pos === "start" && sym === start || pos === "end" && sym === end) {
+                            currency = cname;
+                            break;
+                        }
+                    }
+                }
+
+                if (!fmtmode) {
+                    fmtmode = range[range.length - 1].split(":")[1];
+                }
+
+                return {
+                    currency: currency,
+                    low: Number(range[0].replace(nondec, "")),
+                    high: range[1] ? Number(range[1].replace(nondec, "")) : undefined,
+                    mode: EconCC.Mode[fmtmode]
+                };
             }
         }, {
             key: "f",
@@ -280,14 +378,9 @@
 
                 if (mode === EconCC.Mode.ShortRange || mode === EconCC.Mode.LongRange) {
                     primary = this.formatCurrencyRange(value);
-                    if (value.low || value.high || !value.value) {
-                        value = this.valueFromRange(value);
-                    }
+                    if (value.low || !value.value) value = this.valueFromRange(value);
                 } else {
-                    if (value.low || value.high || !value.value) {
-                        value = this.valueFromRange(value);
-                    }
-
+                    if (value.low || !value.value) value = this.valueFromRange(value);
                     primary = this.formatCurrency(value);
                 }
 
@@ -295,14 +388,14 @@
                     return primary;
                 }
 
-                var vc = this._gc(value.currency),
-                    fmt = [],
-                    donecur = {},
-                    label = mode === EconCC.Mode.Label,
-                    threshold = label ? 1 : 0.8;
+                var vc = this._gc(value.currency);
+                var fmt = [];
+                var donecur = {};
+                var label = mode === EconCC.Mode.Label;
+                var threshold = label ? 1 : 0.8;
 
                 if (label) {
-                    fmt.push({ str: primary, cvalue: vc._bc[this._rt()] });
+                    fmt.push({ str: primary, cvalue: this._brt(vc) });
                 }
 
                 donecur[vc.internal] = true;
@@ -321,7 +414,7 @@
                     var obj = { str: this.formatCurrency(val), fmt: cur.pos.fmt };
 
                     if (label) {
-                        obj.cvalue = cur._bc[this._rt()];
+                        obj.cvalue = this._brt(cur);
                     }
 
                     donecur[cname] = true;
@@ -331,7 +424,6 @@
                 if (label) {
                     fmt.sort(function (a, b) {
                         var cv = b.cvalue - a.cvalue;
-
                         if (cv === 0) {
                             return b.fmt - a.fmt;
                         }

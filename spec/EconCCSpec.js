@@ -5,7 +5,6 @@ describe("EconCC", function () {
 
     var ec, f;
     var emparams = EconCC.cFromBackpack(currencies, pricelist);
-
     beforeEach(function () {
         ec = new EconCC(emparams);
         f = ec.f.bind(ec);
@@ -160,6 +159,12 @@ describe("EconCC", function () {
         it("parses range+mode", function () {
             expect(ec.parse("1-2 ref:Long")).toEqual({low: 1, high: 2, currency: 'ref', mode: EconCC.Mode.Long});
         });
+        it("parses symbols", function () {
+            expect(ec.parse("$1")).toEqual({low: 1, currency: 'usd', high: undefined, mode: undefined});
+            expect(ec.parse("$1-2")).toEqual({low: 1, currency: 'usd', high: 2, mode: undefined});
+            expect(ec.parse("$1:Long")).toEqual({low: 1, currency: 'usd', high: undefined, mode: EconCC.Mode.Long});
+            expect(ec.parse("$1-2:Long")).toEqual({low: 1, currency: 'usd', high: 2, mode: EconCC.Mode.Long});
+        });
     });
 
     describe("#scm", function () {
@@ -173,15 +178,34 @@ describe("EconCC", function () {
         });
     });
 
-    describe("#_gc", function () {
+    describe("#_rc", function () {
         it("accepts currency objects", function () {
-            expect(ec._gc(ec.currencies.metal)).toBe(ec.currencies.metal);
+            expect(ec._rc(ec.currencies.metal)).toBe(ec.currencies.metal);
         });
         it("accepts internal names", function () {
-            expect(ec._gc("metal")).toBe(ec.currencies.metal);
+            expect(ec._rc("metal")).toBe(ec.currencies.metal);
         });
         it("converts aliases", function () {
-            expect(ec._gc("buds")).toBe(ec.currencies.earbuds);
+            expect(ec._rc("buds")).toBe(ec.currencies.earbuds);
+        });
+    });
+
+    describe("#isCurrency", function () {
+        it("handles {currency.internal}", function () {
+            expect(ec.isCurrency("metal")).toBe(true);
+            expect(ec.isCurrency("nope")).toBe(false);
+        });
+        it("handles currency objects", function () {
+            expect(ec.isCurrency(ec.currencies.metal)).toBe(true);
+            expect(ec.isCurrency({})).toBe(false);
+        });
+        it("handles aliases", function () {
+            expect(ec.isCurrency("ref")).toBe(true);
+        });
+        it("handles values with .currency", function () {
+            expect(ec.isCurrency({currency: 'metal'})).toBe(true);
+            expect(ec.isCurrency({currency: 'ref'})).toBe(true);
+            expect(ec.isCurrency({currency: 'notref'})).toBe(false);
         });
     });
 
@@ -215,6 +239,13 @@ describe("EconCC", function () {
 
             expect(ec.step).toBe(EconCC.Disabled);
             expect(ec.trailing).toBe(EconCC.Auto);
+        });
+        it("does a partial object patch", function () {
+            expect(ec.currencies.metal.hidden).toBe(false);
+            ec.scope({currencies: {metal: {hidden: true}}}, function () {
+                expect(ec.currencies.metal.hidden).toBe(true);
+            });
+            expect(ec.currencies.metal.hidden).toBe(false);
         });
     });
 });

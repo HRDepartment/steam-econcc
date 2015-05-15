@@ -3,6 +3,7 @@ require('econcc') returns the EconCC class.
 An instance must be created using new: new EconCC(...)
 
 ## class EconCC
+### Public
 ##### enum EconCC.Mode
 EconCC.Mode.{Short, Long, ShortRange, LongRange, Label}
 
@@ -81,10 +82,15 @@ Thousand and decimal separators.
 
 ##### #modify(Object opts) -> this
 Applies the opts to the instance (.currencies, .aliases, etc.) and calls #update.
+
 ##### #update() -> this
 Updates the currencies to have their BC values set up. Must be called whenever .currencies is changed, even real world currencies, otherwise you will continue using the old values.
+
 ##### #scope(Object state, Function fn) -> this
-Creates a copy of the current state and calls #modify with the specified state. fn is then called with this instance as first argument. Finally the old state is restored using #modify. This function can be stacked. (#scope inside #scope)
+Creates a copy of the current state and calls #modify with the specified state. Objects are partially patched, meaning you will tweak only the values you specify. fn is then called with this instance as first argument. Finally the old state is restored using #modify. This function can be stacked. (#scope inside #scope)
+
+##### #isCurrency(EconCCValue|EconCCRangedValue|EconCCCurrency cur) -> bool
+Whether the given currency (or a value's .currency) is a currency registered in this instance. (includes checking aliases)
 
 ##### #valueFromRange(EconCCRangedValue value) -> EconCCValue
 Converts the EconCCRangedValue to an EconCCValue based on .range.
@@ -174,3 +180,27 @@ Like #formatCurrencyRange, but includes any formatting by #format by calling #fo
 Behaves exactly like #format when there's no {value.high}.
 
 Important to note: the range separator is not - (HYPHEN-MINUS U+002D) but instead – (EN DASH U+2013).
+
+### Private
+Private methods are not guaranteed to be backwards compatible in any way. They can be removed or altered significantly at any time. Lock your version to steam-econcc and upgrade with care if you use them.
+
+##### static _makeRWC(Object{name, symbol, pos, round, low, high}) -> EconCCCurrencySpecification
+Creates a real world currency specification.
+
+##### #_rc(EconCCCurrency cur) -> EconCCCurrencySpecification?
+Resolves an EconCCCurrency, may return undefined if not found.
+
+##### #_gc(EconCCCurrency cur) throws TypeError -> EconCCCurrencySpecification
+Basically #_rc, but throws a TypeError if cur could not be resolved.
+
+##### #_vv(EconCCNumberValue|EconCCRangedValue value) -> Number
+Obtains a value object's value, or returns the value if it's a number. Uses #valueFromRange to cast a EconCCRangedValues to EconCCNumberValues.
+
+##### #_floatdiv(Number a, Number b, Number acc, Function<(Number num) -> Number> round) -> Number
+Does a floating point division with accuracy acc. Round is defaulted to a function that returns the input, but other functions like Math.round can be passed.
+
+##### #_brt(EconCCCurrencySpecification currency) -> Number
+Returns the currency's bc value according to the current .range.
+
+##### #_sepnum(Number num) -> String
+Adds thousand and decimal separators to a number.

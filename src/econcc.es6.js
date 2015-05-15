@@ -1,3 +1,5 @@
+let nondec = /[^\d\.\-e+]/g;
+
 class EconCC {
     constructor(currencies, pricelist) {
         this.currencies = {};
@@ -19,12 +21,46 @@ class EconCC {
     }
 
     modify(state={}) {
+        function copy(o) {
+            let c = {};
+
+            for (let v in o) {
+                if (typeof o[v] == 'object') {
+                    c[v] = copy(o[v]);
+                } else {
+                    c[v] = o[v];
+                }
+            }
+
+            return c;
+        }
+
+        function patch(val, withVal) {
+            let c = copy(val);
+
+            for (let v in withVal) {
+                let wv = withVal[v];
+
+                if (typeof wv === 'object') {
+                    c[v] = patch(c[v] || {}, wv);
+                } else {
+                    c[v] = wv;
+                }
+            }
+
+            return c;
+        }
+
         for (let name in state) {
-            let val = state[name],
-                self = this[name];
+            let val = state[name];
+            let self = this[name];
 
             if (val !== undefined && typeof self !== 'undefined' && typeof self !== 'function') {
-                this[name] = val;
+                if (typeof val === 'object') {
+                    this[name] = patch(self, val);
+                } else {
+                    this[name] = val;
+                }
             }
 
             if (name === 'currencies') this.update();
@@ -89,23 +125,40 @@ class EconCC {
         return res;
     }
 
+    _rc(currency) {
+        let co = typeof currency === 'object' && currency.internal && this.currencies[currency.internal] ? currency : undefined;
+        return this.aliases[currency] ? this.currencies[this.aliases[currency]] : (this.currencies[currency] || co);
+    }
+
     _gc(currency) {
-        let cur = this.aliases[currency] ? this.currencies[this.aliases[currency]] : (this.currencies[currency] || currency);
+        let cur = this._rc(currency);
 
         if (!cur || typeof cur !== 'object') {
-            throw new Error("no such currency: " + currency + " | currencies: " + Object.keys(this.currencies) + " / aliases: " + Object.keys(this.aliases));
+            throw new TypeError("no such currency: " + currency + " | currencies: " + Object.keys(this.currencies) + " / aliases: " + Object.keys(this.aliases));
         }
 
         return cur;
     }
 
-    _floatdiv(a, b, acc=2, round=((n) => n)) {
-        let p = Math.pow(10, acc < 2 ? 2 : acc);
-        return round(a * p / b) / p;
+    _vv(value) {
+        if (typeof value === 'object') {
+            if (typeof value.low === 'number') return this.valueFromRange(value).value;
+            else if (typeof value.value === 'number') return value.value;
+            else return 0;
+        }
+
+        return value || 0;
     }
 
-    _rt() {
-        return EconCC.RangeTag[this.range];
+    _floatdiv(a, b, acc=2, round=null) {
+        let p = Math.pow(10, acc < 2 ? 2 : acc);
+        let fn = round || ((n) => n);
+
+        return fn(a * p / b) / p;
+    }
+
+    _brt(currency) {
+        return currency._bc[EconCC.RangeTag[this.range]];
     }
 
     _sepnum(num) {
@@ -120,18 +173,27 @@ class EconCC {
         return this.modify(self);
     }
 
-    convertToBC(value, currency=value.currency) {
-        currency = this._gc(currency);
-        value = typeof value === 'object' ? value.value : value;
+    isCurrency(cur) {
+        if (typeof cur === 'object') {
+            if (cur.currency) cur = cur.currency;
+            else if (!cur.internal) return false;
+        }
 
-        return (!currency || currency.bc || currency.rwc) ? value : value * currency._bc[this._rt()];
+        return !!this._rc(cur);
+    }
+
+    convertToBC(value, currency=value.currency) {
+        let cur = this._gc(currency);
+        let val = this._vv(value);
+
+        return (!cur || cur.bc || cur.rwc) ? val : val * this._brt(cur);
     }
 
     convertFromBC(value, currency=value.currency) {
-        currency = this._gc(currency);
-        value = typeof value === 'object' ? value.value : value;
+        let cur = this._gc(currency);
+        let val = this._vv(value);
 
-        return (!currency || currency.bc || currency.rwc) ? value : this._floatdiv(value, currency._bc[this._rt()], currency.round);
+        return (!cur || cur.bc || cur.rwc) ? val : this._floatdiv(val, this._brt(cur), cur.round);
     }
 
     convertToCurrency(value, oldc, newc) {
@@ -143,14 +205,14 @@ class EconCC {
         let oldcc = this._gc(oldc);
 
         newc = this._gc(newc);
-        value = typeof value === 'object' ? value.value : (value || 0);
+        value = this._vv(value);
 
         let ret = {currency: newc.internal};
-        if (oldcc.rwc) value = this._floatdiv(value, oldcc._bc[this._rt()], oldcc.round);
+        if (oldcc.rwc) value = this._floatdiv(value, this._brt(oldcc), oldcc.round);
         if (newc.bc) {
             ret.value = this.convertToBC(value, oldc);
         } else if (newc.rwc) {
-            ret.value = this.convertToBC(value, oldc) * newc._bc[this._rt()];
+            ret.value = this.convertToBC(value, oldc) * this._brt(newc);
         } else {
             ret.value = this.convertFromBC(this.convertToBC(value, oldc), newc);
         }
@@ -175,7 +237,7 @@ class EconCC {
     formatCurrency(value, currency=value.currency, name=true) {
         let cur = this._gc(currency);
         let str = "",
-            val = +((typeof value === 'number' ? value : value.value).toFixed(cur.round));
+            val = +(this._vv(value).toFixed(cur.round));
         let trailing = (cur.rwc || this.trailing === EconCC.Auto) ? cur.trailing : this.trailing;
 
         if (this.step !== EconCC.Disabled &&
@@ -191,7 +253,7 @@ class EconCC {
         val = this._sepnum(val);
         if (!name) return val;
         if (cur.rwc) {
-            switch(cur.pos.sym) {
+            switch (cur.pos.sym) {
             case "start":
                 str = cur.symbol + val;
                 break;
@@ -208,10 +270,38 @@ class EconCC {
 
     parse(str) {
         let parts = str.split(" ");
-        let range = parts[0].split("-");
-        let mode = parts[1].split(":");
+        let range = (parts[0] || "").split(/-|–/);
+        let mode = (parts[1] || "").split(":");
+        let currency = mode[0];
+        let fmtmode = mode[1];
 
-        return {currency: mode[0], low: +(range[0].replace(/,/g, "")), high: range[1] ? +(range[1].replace(/,/g, "")) : undefined, mode: EconCC.Mode[mode[1]]};
+        if (!this.isCurrency(currency)) {
+            for (let cname in this.currencies) {
+                let cur = this.currencies[cname];
+                let sym = cur.symbol;
+
+                if (!sym) continue;
+                let pos = cur.pos.sym;
+                let start = (range[0] || "")[0];
+                let end = range[1] ? range[1].slice(-1) : "";
+
+                if ((pos === "start" && sym === start) || (pos === "end" && sym === end)) {
+                    currency = cname;
+                    break;
+                }
+            }
+        }
+
+        if (!fmtmode) {
+            fmtmode = range[range.length - 1].split(":")[1];
+        }
+
+        return {
+            currency,
+            low: Number(range[0].replace(nondec, "")),
+            high: range[1] ? Number(range[1].replace(nondec, "")) : undefined,
+            mode: EconCC.Mode[fmtmode]
+        };
     }
 
     // Helper for consumers
@@ -225,14 +315,9 @@ class EconCC {
 
         if (mode === EconCC.Mode.ShortRange || mode === EconCC.Mode.LongRange) {
             primary = this.formatCurrencyRange(value);
-            if (value.low || value.high || !value.value) {
-                value = this.valueFromRange(value);
-            }
+            if (value.low || !value.value) value = this.valueFromRange(value);
         } else {
-            if (value.low || value.high || !value.value) {
-                value = this.valueFromRange(value);
-            }
-
+            if (value.low || !value.value) value = this.valueFromRange(value);
             primary = this.formatCurrency(value);
         }
 
@@ -240,14 +325,14 @@ class EconCC {
             return primary;
         }
 
-        let vc = this._gc(value.currency),
-            fmt = [],
-            donecur = {},
-            label = mode === EconCC.Mode.Label,
-            threshold = label ? 1 : 0.8;
+        let vc = this._gc(value.currency);
+        let fmt = [];
+        let donecur = {};
+        let label = mode === EconCC.Mode.Label;
+        let threshold = label ? 1 : 0.8;
 
         if (label) {
-            fmt.push({str: primary, cvalue: vc._bc[this._rt()]});
+            fmt.push({str: primary, cvalue: this._brt(vc)});
         }
 
         donecur[vc.internal] = true;
@@ -266,7 +351,7 @@ class EconCC {
             let obj = {str: this.formatCurrency(val), fmt: cur.pos.fmt};
 
             if (label) {
-                obj.cvalue = cur._bc[this._rt()];
+                obj.cvalue = this._brt(cur);
             }
 
             donecur[cname] = true;
@@ -276,7 +361,6 @@ class EconCC {
         if (label) {
             fmt.sort(function (a, b) {
                 let cv = b.cvalue - a.cvalue;
-
                 if (cv === 0) {
                     return b.fmt - a.fmt;
                 }
@@ -291,7 +375,7 @@ class EconCC {
 
     formatRange(value, mode=EconCC.Mode.Short) {
         let cur = value.currency;
-        return this.format({currency: cur, value: value.low}) + (value.high ? " – " + this.format({currency: cur, value: value.high}) : "");
+        return this.format({currency: cur, value: value.low}, mode) + (value.high ? " – " + this.format({currency: cur, value: value.high}, mode) : "");
     }
 
     scm(val) {
