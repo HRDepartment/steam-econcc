@@ -17,7 +17,7 @@ See [Documentation.md](Documentation.md).
 ### Testing
 Tests are written using jasmine. Install the test runner globally (`npm install -g jasmine`) and run `npm test` in the root directory.
 
-Compile the source with: `babel src/econcc.es6.js --no-comments -m umdStrict --module-id EconCC > econcc.js`
+Compile the source with: `babel src/econcc.es6.js --no-comments --loose -m umdStrict --module-id EconCC > econcc.js && node fixbabel`
 
 ### License
 
