@@ -1,10 +1,9 @@
 describe("EconCC", function () {
     var EconCC = require('../index.js');
     var currencies = require('./currencies.json');
-    var pricelist = require('./pricelist.json');
 
     var ec, f;
-    var emparams = EconCC.cFromBackpack(currencies, pricelist);
+    var emparams = EconCC.cFromBackpack(currencies);
     beforeEach(function () {
         ec = new EconCC(emparams);
         f = ec.f.bind(ec);

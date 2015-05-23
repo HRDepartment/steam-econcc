@@ -1,7 +1,7 @@
 let nondec = /[^\d\.\-e+]/g;
 
 class EconCC {
-    constructor(currencies, pricelist) {
+    constructor(currencies) {
         this.currencies = {};
         this.aliases = {};
         this.step = EconCC.Disabled;
@@ -10,11 +10,9 @@ class EconCC {
         this.separators = {thousand: ",", decimal: "."};
 
         if (typeof currencies === 'object') {
-            if (typeof pricelist === 'object') {
-                // fromBackpack shorthand
-                this.modify(EconCC.cFromBackpack(currencies, pricelist));
-            } else {
-                // initialize with object
+            if (currencies.response || currencies.name) {  // fromBackpack shorthand
+                this.modify(EconCC.cFromBackpack(currencies));
+            } else { // initialize with object
                 this.modify(currencies);
             }
         }
@@ -406,26 +404,10 @@ class EconCC {
         return {currency: price.currency, low: price.value, high: price.value_high};
     }
 
-    static cFromBackpack(currencies, pricelist) {
-        let c = currencies;
-
-        if (c.response) c = c.response;
-
-        switch (c.name) {
-            //case "Team Fortress 2":
-            default:
-                return EconCC.cFromBackpackTF(currencies, pricelist);
-        }
-    }
-
-    static cFromBackpackTF(currencies, pricelist) {
+    static cFromBackpack(currencies) {
         if (currencies.response) currencies = currencies.response;
         if (currencies.currencies) currencies = currencies.currencies;
 
-        if (pricelist.response) pricelist = pricelist.response;
-        if (pricelist.items) pricelist = pricelist.items;
-
-        let plistkeys = Object.keys(pricelist);
         let currs = {
             "usd": EconCC._makeRWC({
                 name: "usd",
@@ -439,19 +421,7 @@ class EconCC {
         let pos = 0;
         for (let cname in currencies) {
             let cobj = currencies[cname];
-            let plist;
-
-            for (let i = 0, len = plistkeys.length; i < len; i += 1) {
-                let item = pricelist[plistkeys[i]];
-                if (item.defindex[0] === cobj.defindex) {
-                    plist = item;
-                    break;
-                }
-            }
-
-            if (!plist) throw new Error("Unknown defindex " + cobj.defindex + " not in pricelist");
-
-            let iprice = plist.prices[cobj.quality][cobj.tradable][cobj.craftable][0];
+            let iprice = cobj.price;
             let hidden = cobj.blanket || cobj.hidden;
             let curn = currs[cname] = {
                 internal: cname,

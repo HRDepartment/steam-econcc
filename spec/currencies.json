@@ -9,7 +9,12 @@
                 "blanket": 0,
                 "craftable": "Craftable",
                 "tradable": "Tradable",
-                "defindex": 5002
+                "defindex": 5002,
+                "price": {
+                    "currency": "usd",
+                    "value": 0.11,
+                    "value_high": 0.12
+                }
             },
             "hat": {
                 "quality": 6,
@@ -20,7 +25,11 @@
                 "blanket_name": "Random Craft Hat",
                 "craftable": "Craftable",
                 "tradable": "Tradable",
-                "defindex": -2
+                "defindex": -2,
+                "price": {
+                    "currency": "metal",
+                    "value": 1.33
+                }
             },
             "keys": {
                 "quality": 6,
@@ -30,7 +39,11 @@
                 "blanket": 0,
                 "craftable": "Craftable",
                 "tradable": "Tradable",
-                "defindex": 5021
+                "defindex": 5021,
+                "price": {
+                    "currency": "metal",
+                    "value": 17
+                }
             },
             "earbuds": {
                 "quality": 6,
@@ -40,7 +53,12 @@
                 "blanket": 0,
                 "craftable": "Craftable",
                 "tradable": "Tradable",
-                "defindex": 143
+                "defindex": 143,
+                "price": {
+                    "currency": "keys",
+                    "value": 5.25,
+                    "value_high": 5.5
+                }
             }
         }
     }

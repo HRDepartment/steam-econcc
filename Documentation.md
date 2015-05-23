@@ -62,11 +62,12 @@ Value in Number or an Object containg a 'value' property, such as EconCCValue. A
 
 ##### EconCC.iFromBackpack(Object item) -> EconCCRangedValue
 Converts an item's value in backpack.tf IGetPrices v4 format to EconCC format.
-##### EconCC.cFromBackpack(Object currencies, Object pricelist) -> Object
-Returns an object containing currencies from backpack.tf's IGetCurrencies(v1)/IGetPrices(v4) APIs in EconCC format. Currently only Team Fortress 2 is supported.
+##### EconCC.cFromBackpack(Object currencies) -> Object
+Returns an object containing currencies from backpack.tf's IGetCurrencies(v1) API in EconCC format. Only Team Fortress 2 is supported.
 
-##### #constructor(Object currencies?, Object pricelist?) -> EconCC instance
-Initializes this EconCC instance. If pricelist is specified, currencies and pricelist are passed to EconCC.cFromBackpack and imported. Otherwise, currencies (here, poorly named) is passed to #modify (can also be empty).
+##### #constructor(Object currencies?) -> this
+Initializes this EconCC instance. If currencies is an object from backpack.tf's IGetCurrencies (has .response or .name), it is passed to EconCC.cFromBackpack and its representation imported. Otherwise, currencies (here, poorly named) is passed to #modify (can also be empty).
+
 ##### .currencies (Object)
 Object containing this instance's currencies (EconCCCurrencySpecification). **Call #update after modifying this object.**
 ##### .aliases (Object)
