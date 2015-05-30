@@ -6,12 +6,12 @@ You can feed backpack.tf's IGetCurrencies API into it, or specify your own curre
 
 EconCC has no dependencies and is supported on node.js/io.js and the browser (ES5 or better). backpack.tf parsing is supported for IGetCurrencies v1. You must obtain the data yourself and JSON.parse it before feeding it into EconCC.
 
-CSGO/Dota 2 support is a possibility, however neither games have good price representations.
+CSGO/Dota 2 are supported, using backpack.tf's IGetMarketPrices API. See [CSGOSCMSpec.js](spec/CSGOSCMSpec.js) for an implementation.
 
 npm: `npm install --save steam-econcc`
 
 ### Examples
-See [EconCCSpec.js](spec/EconCCSpec.js) for some example usage.
+See [TFSpec.js](spec/TFSpec.js) for some example usage.
 
 ### Documentation
 See [Documentation.md](Documentation.md).
@@ -19,7 +19,7 @@ See [Documentation.md](Documentation.md).
 ### Testing
 Tests are written using jasmine. Install the test runner globally (`npm install -g jasmine`) and run `npm test` in the root directory.
 
-Compile the source with: `babel src/econcc.es6.js --no-comments --loose -m umdStrict --module-id EconCC > econcc.js && node fixbabel`
+Compile the source with: `npm run build`
 
 ### License
 

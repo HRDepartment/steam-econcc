@@ -1,7 +1,8 @@
 let nondec = /[^\d\.\-e+]/g;
+let doubledash = /--/g;
 
 class EconCC {
-    constructor(currencies) {
+    constructor(currencies, type, ...args) {
         this.currencies = {};
         this.aliases = {};
         this.step = EconCC.Disabled;
@@ -10,8 +11,9 @@ class EconCC {
         this.separators = {thousand: ",", decimal: "."};
 
         if (typeof currencies === 'object') {
-            if (currencies.response || currencies.name) {  // fromBackpack shorthand
-                this.modify(EconCC.cFromBackpack(currencies));
+            if (currencies.convert !== false) {
+                type = type || "backpackTF";
+                this.convert(type, currencies, ...args);
             } else { // initialize with object
                 this.modify(currencies);
             }
@@ -23,7 +25,7 @@ class EconCC {
             let c = {};
 
             for (let v in o) {
-                if (typeof o[v] == 'object') {
+                if (typeof o[v] === 'object' && Object.prototype.toString.call(o[v]) !== '[object Array]') {
                     c[v] = copy(o[v]);
                 } else {
                     c[v] = o[v];
@@ -39,7 +41,7 @@ class EconCC {
             for (let v in withVal) {
                 let wv = withVal[v];
 
-                if (typeof wv === 'object') {
+                if (typeof wv === 'object' && Object.prototype.toString.call(wv) !== '[object Array]') {
                     c[v] = patch(c[v] || {}, wv);
                 } else {
                     c[v] = wv;
@@ -53,6 +55,7 @@ class EconCC {
             let val = state[name];
             let self = this[name];
 
+            if (name === 'convert') continue;
             if (val !== undefined && typeof self !== 'undefined' && typeof self !== 'function') {
                 if (typeof val === 'object') {
                     this[name] = patch(self, val);
@@ -65,6 +68,23 @@ class EconCC {
         }
 
         return this;
+    }
+
+    convert(type, ...args) {
+        let converter = EconCC.converters[type];
+
+        if (!converter) {
+            throw new Error("Unknown converter (" + converter + ") | Converters: " + Object.keys(EconCC.converters));
+        }
+
+        let converted = converter(...args);
+        for (let name in converted) { // .currencies, .range, etc.
+            if (name !== 'convert') {
+                this[name] = converted[name];
+            }
+        }
+
+        return this.update();
     }
 
     update() {
@@ -83,7 +103,7 @@ class EconCC {
             while (next && !(next.bc || next.rwc)) {
                 low *= next.low;
                 if (high) {
-                    mid *= (next.high ? this._floatdiv(next.low + next.high, 2, next.round) : next.low);
+                    mid *= (next.high ? EconCC._floatdiv(next.low + next.high, 2, next.round) : next.low);
                     high *= next.high || next.low;
                 }
 
@@ -113,7 +133,7 @@ class EconCC {
             res.value = value.low;
             break;
         case EconCC.Range.Mid:
-            res.value = value.high ? this._floatdiv(value.low + value.high, 2, this._gc(currency).round) : value.low;
+            res.value = value.high ? EconCC._floatdiv(value.low + value.high, 2, this._gc(currency).round) : value.low;
             break;
         case EconCC.Range.High:
             res.value = value.high || value.low;
@@ -148,7 +168,7 @@ class EconCC {
         return value || 0;
     }
 
-    _floatdiv(a, b, acc=2, round=null) {
+    static _floatdiv(a, b, acc=2, round=null) {
         let p = Math.pow(10, acc < 2 ? 2 : acc);
         let fn = round || ((n) => n);
 
@@ -191,7 +211,7 @@ class EconCC {
         let cur = this._gc(currency);
         let val = this._vv(value);
 
-        return (!cur || cur.bc || cur.rwc) ? val : this._floatdiv(val, this._brt(cur), cur.round);
+        return (!cur || cur.bc || cur.rwc) ? val : EconCC._floatdiv(val, this._brt(cur), cur.round);
     }
 
     convertToCurrency(value, oldc, newc) {
@@ -206,7 +226,7 @@ class EconCC {
         value = this._vv(value);
 
         let ret = {currency: newc.internal};
-        if (oldcc.rwc) value = this._floatdiv(value, this._brt(oldcc), oldcc.round);
+        if (oldcc.rwc) value = EconCC._floatdiv(value, this._brt(oldcc), oldcc.round);
         if (newc.bc) {
             ret.value = this.convertToBC(value, oldc);
         } else if (newc.rwc) {
@@ -240,7 +260,7 @@ class EconCC {
 
         if (this.step !== EconCC.Disabled &&
             cur.step && val >= cur.step) {
-            val = (Math.floor(val) + this._floatdiv(Math.round(val % 1 / cur.step), Math.floor(1 / cur.step), cur.round, Math.floor)).toFixed(cur.round);
+            val = (Math.floor(val) + EconCC._floatdiv(Math.round(val % 1 / cur.step), Math.floor(1 / cur.step), cur.round, Math.floor)).toFixed(cur.round);
             if (!trailing) val = +val;
         } else {
             if (trailing) {
@@ -296,13 +316,12 @@ class EconCC {
 
         return {
             currency,
-            low: Number(range[0].replace(nondec, "")),
-            high: range[1] ? Number(range[1].replace(nondec, "")) : undefined,
+            low: Number(range[0].replace(doubledash, "00").replace(nondec, "")),
+            high: range[1] ? Number(range[1].replace(doubledash, "00").replace(nondec, "")) : undefined,
             mode: EconCC.Mode[fmtmode]
         };
     }
 
-    // Helper for consumers
     f(str) {
         let value = this.parse(str);
         return this.format(value, value.mode);
@@ -376,53 +395,124 @@ class EconCC {
         return this.format({currency: cur, value: value.low}, mode) + (value.high ? " – " + this.format({currency: cur, value: value.high}, mode) : "");
     }
 
-    scm(val) {
+    scm(val, mode=EconCC.SCM.Buyer, fees={}) {
         let {value, currency} = this.valueFromRange(val);
-        let svalue = Math.max(value - Math.max(value * 0.05, 0.01) - Math.max(value * 0.1, 0.01), 0.01);
+        let buyer = {currency};
+        let seller = {currency};
 
-        return {
-            buyer: {currency, value},
-            seller: {currency, value: svalue}
-        };
+        if (mode === EconCC.SCM.Buyer) {
+            let fee = EconCC.stmCalculateFee(value * 100, fees);
+            let svalue = Math.max(EconCC._floatdiv(fee.cents - fee.fees, 100), 0.01);
+
+            buyer.value = value;
+            seller.value = svalue;
+        } else if (mode === EconCC.SCM.Seller) {
+            seller.value = value;
+            buyer.value = Math.max(EconCC._floatdiv(EconCC.stmCalculateInclFee(value * 100, fees).cents, 100), 0.03);
+        }
+
+        return {buyer, seller};
     }
 
-    static _makeRWC({name, symbol, pos, round, low, high}) {
-        return {
-            internal: name,
-            rwc: true,
-            trailing: true,
-            // How much 1 BC is worth in this currency
-            low: low || 0,
-            high: high || 0,
-            symbol,
-            pos,
-            round
-        };
+    static stmCalculateFee(cents, {stmFee, publisherFee, baseFee, minFee}={}) {
+        stmFee = typeof stmFee === 'number' ? stmFee : 0.05;
+        publisherFee = typeof publisherFee === 'number' ? publisherFee : 0.1;
+        baseFee = typeof baseFee === 'number' ? baseFee : 0;
+        minFee = typeof minFee === 'number' ? minFee : 1;
+
+        let wallet = {stmFee, publisherFee, baseFee, minFee};
+        let receiver = Math.floor((cents - baseFee) / (stmFee + publisherFee + 1));
+        let fees = EconCC.stmCalculateInclFee(receiver, wallet);
+        let undershot = false;
+        let iter = 0;
+
+        // Math correction using Steam's algorithm
+        while (fees.cents !== cents && iter < 50) {
+            if (fees.cents > cents) {
+                if (undershot) {
+                    fees = EconCC.stmCalculateInclFee(receiver - 1, wallet);
+                    fees.steamFee += Math.floor(cents - fees.cents);
+                    fees.fees += Math.floor(cents - fees.cents);
+                    fees.cents = cents;
+                    break;
+                } else {
+                    receiver -= 1;
+                }
+            } else {
+                undershot = true;
+                receiver += 1;
+            }
+
+            fees = EconCC.stmCalculateInclFee(receiver, wallet);
+            iter += 1;
+        }
+
+        return fees;
     }
 
-    static iFromBackpack(price) {
+    static stmCalculateInclFee(funds, {stmFee, publisherFee, baseFee, minFee}={}) {
+        stmFee = typeof stmFee === 'number' ? stmFee : 0.05;
+        publisherFee = typeof publisherFee === 'number' ? publisherFee : 0.1;
+        baseFee = typeof baseFee === 'number' ? baseFee : 0;
+        minFee = typeof minFee === 'number' ? minFee : 1;
+
+        let steamFee = Math.floor(Math.floor(Math.max(funds * stmFee, minFee)) + baseFee);
+        let pubFee = Math.floor(publisherFee > 0 ? Math.max(funds * publisherFee, 1) : 0);
+        let fees = steamFee + pubFee;
+
+        return {steamFee, publisherFee: pubFee, fees, cents: funds + fees};
+    }
+
+    // rwc, gc, bc
+    static makeCurrency(type, {internal, trailing, low, high, round, hidden, label, symbol, pos, currency, names, step}) {
+        if (typeof round === 'undefined') round = 2;
+        let cur = {internal, trailing, low, high, round, hidden, label, pos};
+
+        if (type === "gc" || type === "bc") {
+            if (type === "bc") {
+                cur.bc = true;
+            } else {
+                cur.currency = currency;
+            }
+
+            cur.names = names;
+            cur.step = step;
+        } else if (type === "rwc") {
+            cur.rwc = true;
+            cur.symbol = symbol;
+
+            if (typeof cur.trailing === 'undefined') cur.trailing = true;
+        }
+
+        return cur;
+    }
+}
+
+let Converters = {
+    backpackTFItem(price) {
         return {currency: price.currency, low: price.value, high: price.value_high};
-    }
-
-    static cFromBackpack(currencies) {
+    },
+    backpackTF(currencies) {
         if (currencies.response) currencies = currencies.response;
         if (currencies.currencies) currencies = currencies.currencies;
 
+        let aliases = {};
+        let pos = 0;
         let currs = {
-            "usd": EconCC._makeRWC({
-                name: "usd",
+            "usd": EconCC.makeCurrency("rwc", {
+                internal: "usd",
                 symbol: "$",
-                pos: {sym: "start", fmt: 99},
-                round: 2
+                pos: {sym: "start", fmt: 99}
             })
         };
-        let aliases = {};
 
-        let pos = 0;
         for (let cname in currencies) {
             let cobj = currencies[cname];
             let iprice = cobj.price;
             let hidden = cobj.blanket || cobj.hidden;
+
+            if (cname === "earbuds") hidden = true;
+
             let curn = currs[cname] = {
                 internal: cname,
                 currency: iprice.currency,
@@ -437,8 +527,6 @@ class EconCC {
             };
 
             aliases[cobj.single] = aliases[cobj.plural] = cname;
-
-            pos += 1;
             if (cname === "metal") {
                 curn.bc = true; // base currency
                 curn.step = 0.055;
@@ -449,14 +537,81 @@ class EconCC {
             } else if (cname === "earbuds" || cname === "keys") {
                 curn.step = 0.05;
             }
+
+            pos += 1;
         }
 
-        return {currencies: currs, range: EconCC.Range.Mid, aliases};
+        return {currencies: currs, range: EconCC.Range.Mid, aliases, convert: false};
+    },
+    // IGetMarketPrices
+    backpackSCM(items, spec, rwc, notax=false) {
+        if (items.response) items = items.response;
+        if (items.items) items = items.items;
+
+        let aliases = {};
+        let pos = 0;
+        let currs = {};
+
+        if (!rwc) {
+            rwc = EconCC.makeCurrency("rwc", {
+                internal: "usd",
+                symbol: "$",
+                pos: {sym: "start", fmt: 99}
+            });
+        }
+
+        currs[rwc.internal] = rwc;
+
+        let fees = typeof notax === 'object' ? notax : {};
+
+        for (let iname in spec) {
+            let item = spec[iname];
+            let {internal: iinternal, names: inames, round: iround, trailing: itrailing, hidden: ihidden, label: ilabel, pos: ipos, bc: ibc, rwc: irwc} = item;
+
+            if (typeof inames === "string") inames = [inames, inames];
+            if (!ipos) ipos = {fmt: pos};
+
+            let cents = items[iname].value;
+            if (notax) {
+                cents -= EconCC.stmCalculateFee(cents, fees).fees;
+            }
+
+            let price = cents / 100;
+
+            if (ibc && !rwc.low) rwc.low = price;
+            currs[iinternal] = {
+                internal: iinternal,
+                names: inames,
+                currency: rwc.internal,
+                round: iround || 2,
+                trailing: itrailing || false,
+                hidden: ihidden || false,
+                label: ilabel || false,
+                low: price,
+                pos: ipos,
+                bc: ibc || false,
+                rwc: irwc || false
+            };
+
+            pos += 1;
+        }
+
+        for (let icur in currs) {
+            let cur = currs[icur];
+
+            if (cur.bc || cur.rwc) continue;
+            cur.low = cur.low / rwc.low;
+        }
+
+        return {currencies: currs, range: EconCC.Range.Mid, aliases, convert: false};
     }
-}
+};
+
+EconCC.converters = Converters;
 
 EconCC.Range = {Low: 0, Mid: 1, High: 2};
 EconCC.Mode = {Short: 1, Long: 2, ShortRange: 3, LongRange: 4, Label: 5};
+EconCC.SCM = {Buyer: 1, Seller: 2};
 EconCC.RangeTag = ["low", "mid", "high"];
 EconCC.Auto = 2;
 EconCC.Enabled = 1;

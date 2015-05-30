@@ -4,7 +4,8 @@
   "description": "Currency conversion and formatting library for Steam economy and real world currencies, based on the format used by backpack.tf.",
   "main": "index.js",
   "scripts": {
-    "test": "jasmine"
+    "test": "jasmine",
+    "build": "babel src/econcc.es6.js --no-comments --loose -m umdStrict --module-id EconCC > econcc.js && node fixbabel"
   },
   "repository": {
     "type": "git",

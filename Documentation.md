@@ -9,6 +9,9 @@ EconCC.Mode.{Short, Long, ShortRange, LongRange, Label}
 
 Formatting is described in [#format](#formateconccrangedvalueeconccvalue-value-enum-econccmode-modeeconccmodeshort---string).
 
+##### enum EconCC.SCM
+EconCC.SCM.{Buyer, Seller}
+
 ##### enum EconCC.Range
 EconCC.Range.{Low, Mid, High}
 * Low: Low-end of the range
@@ -54,19 +57,28 @@ GC-specific
 * Number step: Step value of the currency. Decimals are rounded to the nearest (step). (step = 0.055; 0.06 -> 0.05, 0.90 -> 0.88, 0.32 -> 0.33)
 * Object pos{Number fmt}: Format order. (lower is better)
 
-##### typedef EconCCCurrency EconCCCurrencySpecification|String
+##### interface EconCCWalletInfo
+Based on Steam's g_rgWalletInfo. All values have defaults, which are described here.
+
+* Number stmFee = 0.05: Steam fee, in percent. (g_rgWalletInfo.wallet_fee_percent)
+* Number publisherFee = 0.1: Game publisher's fee, in percent. (g_rgWalletInfo.wallet_publisher_fee_percent_default or function argument)
+* Number baseFee = 0: Fee applied to all sales. (g_rgWalletInfo.wallet_fee_base)
+* Number minFee = 1: Minimum Steam fee in cents. Note that the publisherFee's minimum is always 1 cent. (g_rgWalletInfo.wallet_fee_minimum)
+
+##### interface EconCCSTMFeeInfo
+* Number steamFee: Steam's fee, in cents.
+* Number publisherFee: Publisher fee, in cents.
+* Number fees: steamFee + publisherFee, in cents.
+* Number cents: Value with tax (stmCalculateInclFee) or without (stmCalculateFee), in cents.
+
+##### typedef EconCCCurrencySpecification|String EconCCCurrency
 A currency alias, a currency's {currency.internal}, or a currency object (in .currencies).
 
-##### typedef EconCCNumberValue Object{Number value}|Number
+##### typedef Object{Number value}|Number EconCCNumberValue
 Value in Number or an Object containg a 'value' property, such as EconCCValue. An EconCCNumberValue as Object can also contain .currency which will be used as currency for functions that require them. Such functions always offer an argument that can be populated manually.
 
-##### EconCC.iFromBackpack(Object item) -> EconCCRangedValue
-Converts an item's value in backpack.tf IGetPrices v4 format to EconCC format.
-##### EconCC.cFromBackpack(Object currencies) -> Object
-Returns an object containing currencies from backpack.tf's IGetCurrencies(v1) API in EconCC format. Only Team Fortress 2 is supported.
-
-##### #constructor(Object currencies?) -> this
-Initializes this EconCC instance. If currencies is an object from backpack.tf's IGetCurrencies (has .response or .name), it is passed to EconCC.cFromBackpack and its representation imported. Otherwise, currencies (here, poorly named) is passed to #modify (can also be empty).
+##### #constructor(Object currencies?, String type="backpackTF", ...converterArgs?) -> this
+Initializes this EconCC instance. If currencies is an object and does not contain a 'convert' property that is false, it is passed to the converter specified (type) and its values are imported. ...converterArgs are additionally passed to the converter.
 
 ##### .currencies (Object)
 Object containing this instance's currencies (EconCCCurrencySpecification). **Call #update after modifying this object.**
@@ -82,13 +94,16 @@ Which part of the range should be used. By default EconCC.Range.Low, but EconCC.
 Thousand and decimal separators.
 
 ##### #modify(Object opts) -> this
-Applies the opts to the instance (.currencies, .aliases, etc.) and calls #update.
+Applies the opts to the instance (.currencies, .aliases, etc.) and calls #update. The 'convert' value (if present) is ignored.
 
 ##### #update() -> this
 Updates the currencies to have their BC values set up. Must be called whenever .currencies is changed, even real world currencies, otherwise you will continue using the old values.
 
 ##### #scope(Object state, Function fn) -> this
 Creates a copy of the current state and calls #modify with the specified state. Objects are partially patched, meaning you will tweak only the values you specify. fn is then called with this instance as first argument. Finally the old state is restored using #modify. This function can be stacked. (#scope inside #scope)
+
+##### #convert(String converter, ...args) throws Error -> this
+Calls the specified converter with ...args and applies its values. An error will be thrown if the converter does not exist.
 
 ##### #isCurrency(EconCCValue|EconCCRangedValue|EconCCCurrency cur) -> bool
 Whether the given currency (or a value's .currency) is a currency registered in this instance. (includes checking aliases)
@@ -127,10 +142,12 @@ Helper function for #format. Parses the value with #parse, and calls #format wit
 
 Mode defaults to EconCC.Mode.Short.
 
-##### #scm(EconCCValue|EconCCRangedValue value) -> EconCCSCMValue
-Returns what the buyer/seller has to pay for/receives from an SCM purchase. value is casted to an EconCCRangedValue using #valueFromRange.
+##### #scm(EconCCValue|EconCCRangedValue value, enum EconCC.SCM mode=EconCC.SCM.Buyer, EconCCWalletInfo fees) -> EconCCSCMValue
+Returns what the buyer/seller has to pay for/receives from an SCM purchase. value is casted to an EconCCRangedValue using #valueFromRange. Values are always copied. fees is passed to the relevant stmCalculate function.
 
-The EConCCSCMValue's seller property is always a copy of value and never a reference.
+When mode is EconCC.SCM.Buyer, the value passed is the cost of the item (including fees, $2.49.) If it's EconCC.SCM.Seller, the value passed is how much the seller will receive (excluding fees, $2.17.)
+
+Although you can specify any currency you'd like in value, it's recommended you cast it to the appropriate RWC first. You don't have to, but you might encounter rounding issues.
 
 ##### #format(EconCCRangedValue|EconCCValue value, enum EconCC.Mode mode=EconCC.Mode.Short) -> String
 Formats the EconCCValue or EconCCRangedValue (EconCCRangedValue is converted to EconCCValue using #valueFromRange). Each mode has its own special formatting:
@@ -182,26 +199,55 @@ Behaves exactly like #format when there's no {value.high}.
 
 Important to note: the range separator is not - (HYPHEN-MINUS U+002D) but instead – (EN DASH U+2013).
 
-### Private
-Private methods are not guaranteed to be backwards compatible in any way. They can be removed or altered significantly at any time. Lock your version to steam-econcc and upgrade with care if you use them.
+##### #makeCurrency(String type, Object opts) -> Object
+Creates a currency with type type (must be rwc, gc, or bc).
 
-##### static _makeRWC(Object{name, symbol, pos, round, low, high}) -> EconCCCurrencySpecification
-Creates a real world currency specification.
+Opts can include: internal, trailing, low, high, round, hidden, label, symbol, pos, currency, names, step. Some are mandatory.
 
-##### #_rc(EconCCCurrency cur) -> EconCCCurrencySpecification?
-Resolves an EconCCCurrency, may return undefined if not found.
+### Static (public)
+These functions are available on the EconCC class object, e.g. require('econcc').stmCalculateFee or EconCC.stmCalculateFee. They are not available on an instance (ec.stmCalculateFee is undefined.)
 
-##### #_gc(EconCCCurrency cur) throws TypeError -> EconCCCurrencySpecification
-Basically #_rc, but throws a TypeError if cur could not be resolved.
+##### .stmCalculateFee(Number cents, EconCCWalletInfo walletInfo) -> EconCCSTMFeeInfo
+Calculates the Steam and publisher fee of fee-included value cents. (2.49 fee-included would be 2.49 cents, 0.31 fees; cents - fees for fee-less)
 
-##### #_vv(EconCCNumberValue|EconCCRangedValue value) -> Number
-Obtains a value object's value, or returns the value if it's a number. Uses #valueFromRange to cast a EconCCRangedValues to EconCCNumberValues.
+##### .stmCalculateInclFee(Number cents, EconCCWalletInfo walletInfo) -> EconCCSTMFeeInfo
+Calculates the Steam and publisher fee of fee-less value cents. (2.18 fee-less would be 2.49 cents, 0.31 fees)
 
-##### #_floatdiv(Number a, Number b, Number acc, Function<(Number num) -> Number> round) -> Number
-Does a floating point division with accuracy acc. Round is defaulted to a function that returns the input, but other functions like Math.round can be passed.
+#### Object EconCC.converters
+Contains the format converters that are available for use. The ones mentioned here are available by default.
 
-##### #_brt(EconCCCurrencySpecification currency) -> Number
-Returns the currency's bc value according to the current .range.
+##### .backpackTFItem(price) -> EconCCRangedValue
+Not a true converter (can't be used to import anything), but can be used to convert a backpack.tf IGetPrices price to EconCC format (EconCCRangedValue).
 
-##### #_sepnum(Number num) -> String
-Adds thousand and decimal separators to a number.
+##### .backpackTF(Object currencies) -> Object
+Converts backpack.tf's IGetCurrencies v1 output to EconCC format.
+
+##### .backpackSCM(Object items, Object spec, Object rwc=[usd], Object|Boolean notax=false) -> Object
+Converts backpack.tf's IGetMarketPrices v1 output to EconCC format. TF, CSGO, and Dota 2 are supported. spec is a specification of the items you want to import, like this:
+(market_hash_name -> specification)
+
+```js
+"CS:GO Capsule Key": {
+    internal: "capsulekeys",
+    names: ["capsule key", "capsule keys"]
+},
+"CS:GO Case Key": {
+    internal: "casekeys",
+    names: ["case key", "case keys"],
+    bc: true
+}```
+
+Supported properties: internal, names, round, trailing, hidden, label, pos, bc, rwc
+
+A BC must be appointed manually, no effort is made to do so by the converter.
+
+rwc is USD by default, which is defined as
+```js
+EconCC.makeCurrency("rwc", {
+    internal: "usd",
+    symbol: "$",
+    pos: {sym: "start", fmt: 99}
+})
+```
+
+If notax is false, values are supplied as-is, tax will be included in all values. If tax is true or an Object, the SCM tax will be deducted from imported values. If it is an Object, it will be passed to #stmCalculateInclFee.

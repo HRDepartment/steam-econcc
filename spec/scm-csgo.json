@@ -1,0 +1,18 @@
+{
+    "response": {
+        "success": 1,
+        "current_time": 1432660459,
+        "items": {
+            "CS:GO Capsule Key": {
+                "last_updated": 1432659608,
+                "quantity": 174,
+                "value": 111
+            },
+            "CS:GO Case Key": {
+                "last_updated": 1432659608,
+                "quantity": 246,
+                "value": 264
+            }
+        }
+    }
+}
